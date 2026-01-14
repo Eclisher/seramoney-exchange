@@ -73,8 +73,8 @@ export default function Index() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
-      <section className="relative overflow-hidden gradient-hero ">
+
+      <section className="relative  overflow-hidden gradient-hero ">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent" />
         <div className="container relative py-20 md:py-32">
           <div className="max-w-3xl mx-auto text-center space-y-8 animate-fade-in">
@@ -82,18 +82,19 @@ export default function Index() {
               <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
               Plateforme d'échange crypto à Madagascar
             </div>
-            
+
             <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight">
               Achetez et vendez vos{" "}
-              <span className="text-accent">cryptomonnaies</span>{" "}
-              via Mobile Money
+              <span className="text-accent">cryptomonnaies</span> via Mobile
+              Money
             </h1>
-            
+
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Échangez USDT, Bitcoin, Tron et Litecoin facilement avec MVola ou Orange Money. 
-              Transactions sécurisées et validées par notre équipe.
+              Échangez USDT, Bitcoin, Tron et Litecoin facilement avec MVola ou
+              Orange Money. Transactions sécurisées et validées par notre
+              équipe.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="xl" variant="hero" asChild>
                 <Link to="/register">
@@ -102,12 +103,10 @@ export default function Index() {
                 </Link>
               </Button>
               <Button size="xl" variant="hero-outline" asChild>
-                <Link to="#how-it-works">
-                  Comment ça marche
-                </Link>
+                <Link to="#how-it-works">Comment ça marche</Link>
               </Button>
             </div>
-            
+
             <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-accent" />
@@ -134,10 +133,11 @@ export default function Index() {
               Pourquoi choisir <span className="text-accent">Seramoney</span> ?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Une solution simple et sécurisée pour échanger vos cryptomonnaies à Madagascar.
+              Une solution simple et sécurisée pour échanger vos cryptomonnaies
+              à Madagascar.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
               <div
@@ -147,8 +147,12 @@ export default function Index() {
                 <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                   <feature.icon className="h-6 w-6 text-accent" />
                 </div>
-                <h3 className="font-display font-semibold text-lg mb-2">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                <h3 className="font-display font-semibold text-lg mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
@@ -163,16 +167,17 @@ export default function Index() {
               Cryptomonnaies disponibles
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Échangez les cryptos les plus populaires via Binance, la première plateforme mondiale.
+              Échangez les cryptos les plus populaires via Binance, la première
+              plateforme mondiale.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
             {cryptos.map((crypto, index) => (
               <CryptoCard key={index} {...crypto} />
             ))}
           </div>
-          
+
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
               <span>Propulsé par</span>
@@ -193,7 +198,7 @@ export default function Index() {
               Quatre étapes simples pour échanger vos cryptomonnaies.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {steps.map((step, index) => (
               <div key={index} className="relative">
@@ -204,8 +209,12 @@ export default function Index() {
                     </div>
                     <step.icon className="h-6 w-6 text-accent" />
                   </div>
-                  <h3 className="font-display font-semibold mb-2">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                  <h3 className="font-display font-semibold mb-2">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {step.description}
+                  </p>
                 </div>
                 {index < steps.length - 1 && (
                   <div className="hidden lg:block absolute top-1/2 -right-3 transform -translate-y-1/2">
@@ -215,7 +224,7 @@ export default function Index() {
               </div>
             ))}
           </div>
-          
+
           <div className="mt-12 text-center">
             <Button size="xl" variant="hero" asChild>
               <Link to="/register">
@@ -235,7 +244,8 @@ export default function Index() {
               Prêt à échanger vos cryptos ?
             </h2>
             <p className="text-primary-foreground/80">
-              Rejoignez des centaines d'utilisateurs à Madagascar qui font confiance à Seramoney Exchange.
+              Rejoignez des centaines d'utilisateurs à Madagascar qui font
+              confiance à Seramoney Exchange.
             </p>
             <Button size="xl" variant="accent" asChild>
               <Link to="/register">

@@ -9,16 +9,23 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent/10 hover:text-accent-foreground",
+        default:
+          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-sky-900 hover:text-white",
         link: "text-primary underline-offset-4 hover:underline",
-        accent: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-lg font-bold",
-        "accent-outline": "border-2 border-accent text-accent hover:bg-accent hover:text-accent-foreground",
+        accent:
+          "bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-lg font-bold",
+        "accent-outline":
+          "border-2 border-accent text-accent hover:bg-accent hover:text-accent-foreground",
         hero: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg font-bold text-base",
-        "hero-outline": "border-2 border-accent/50 text-foreground hover:border-accent hover:bg-accent/10 backdrop-blur-sm",
+        "hero-outline":
+          "border-2 border-accent/50 text-foreground hover:border-accent hover:bg-accent/10 backdrop-blur-sm",
         nav: "text-foreground/80 hover:text-foreground hover:bg-secondary/50",
       },
       size: {
@@ -33,7 +40,7 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  },
+  }
 );
 
 export interface ButtonProps
