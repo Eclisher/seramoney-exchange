@@ -26,17 +26,16 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
+        
         <Link to="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+            <img src="" alt="" />
             <Wallet className="h-5 w-5 text-accent" />
           </div>
           <span className="font-display text-xl font-bold">
             Sera<span className="text-accent">money</span>
           </span>
         </Link>
-
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
           {!isAuthenticated ? (
             <>
@@ -52,7 +51,7 @@ export function Header() {
             </>
           ) : (
             <>
-              <Link to={isAdmin ? "/admin" : "/dashboard"} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Link to={isAdmin ? "/admin" : "/dashboard"} className="text-sm  font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Tableau de bord
               </Link>
               {!isAdmin && (
@@ -72,7 +71,6 @@ export function Header() {
           )}
         </nav>
 
-        {/* Actions */}
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -118,7 +116,6 @@ export function Header() {
             </DropdownMenu>
           )}
 
-          {/* Mobile menu button */}
           <Button
             variant="ghost"
             size="icon"
@@ -129,8 +126,6 @@ export function Header() {
           </Button>
         </div>
       </div>
-
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-background animate-slide-up">
           <div className="container py-4 space-y-4">
@@ -144,7 +139,7 @@ export function Header() {
             
             {!isAuthenticated ? (
               <>
-                <Link to="/login" className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>
+                <Link to="/login"  className="block py-2 text-sm font-medium bg-" onClick={() => setMobileMenuOpen(false)}>
                   Connexion
                 </Link>
                 <Button variant="accent" className="w-full" asChild>

@@ -74,8 +74,7 @@ export default function Index() {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative overflow-hidden gradient-hero">
+      <section className="relative overflow-hidden gradient-hero ">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent" />
         <div className="container relative py-20 md:py-32">
           <div className="max-w-3xl mx-auto text-center space-y-8 animate-fade-in">
