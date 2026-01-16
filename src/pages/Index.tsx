@@ -3,40 +3,43 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CryptoCard } from "@/components/crypto/CryptoIcon";
-import { 
-  Shield, 
-  Zap, 
-  Users, 
-  ArrowRight, 
+import {
+  Shield,
+  Zap,
+  Users,
+  ArrowRight,
   Smartphone,
   CheckCircle2,
   Wallet,
   Send,
   Clock,
-  BadgeCheck
+  BadgeCheck,
 } from "lucide-react";
 
 const features = [
   {
     icon: Shield,
     title: "Sécurisé",
-    description: "Transactions vérifiées manuellement par notre équipe pour une sécurité maximale."
+    description:
+      "Transactions vérifiées manuellement par notre équipe pour une sécurité maximale.",
   },
   {
     icon: Zap,
     title: "Rapide",
-    description: "Traitement des demandes en quelques heures pendant les heures ouvrables."
+    description:
+      "Traitement des demandes en quelques heures pendant les heures ouvrables.",
   },
   {
     icon: Smartphone,
     title: "Mobile Money",
-    description: "Utilisez MVola ou Orange Money pour acheter et vendre vos cryptos."
+    description:
+      "Utilisez MVola ou Orange Money pour acheter et vendre vos cryptos.",
   },
   {
     icon: Users,
     title: "Support humain",
-    description: "Une équipe dédiée à Madagascar pour vous accompagner."
-  }
+    description: "Une équipe dédiée à Madagascar pour vous accompagner.",
+  },
 ];
 
 const cryptos = [
@@ -50,23 +53,23 @@ const steps = [
   {
     icon: Users,
     title: "Créez votre compte",
-    description: "Inscrivez-vous avec votre numéro Mobile Money"
+    description: "Inscrivez-vous avec votre numéro Mobile Money",
   },
   {
     icon: Wallet,
     title: "Faites votre demande",
-    description: "Choisissez d'acheter ou vendre des cryptos"
+    description: "Choisissez d'acheter ou vendre des cryptos",
   },
   {
     icon: Send,
     title: "Effectuez le transfert",
-    description: "Envoyez le paiement Mobile Money ou les cryptos"
+    description: "Envoyez le paiement Mobile Money ou les cryptos",
   },
   {
     icon: BadgeCheck,
     title: "Recevez vos fonds",
-    description: "Validation manuelle et envoi sous 24h"
-  }
+    description: "Validation manuelle et envoi sous 24h",
+  },
 ];
 
 export default function Index() {
@@ -74,28 +77,67 @@ export default function Index() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <section className="relative  overflow-hidden gradient-hero ">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent" />
-        <div className="container relative py-20 md:py-32">
+      <section className="relative overflow-hidden h-[85vh] sm:h-[90vh] lg:h-[95vh]">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover brightness-75"
+        >
+          <source src="/videos/hero-bg.mp4" type="video/mp4" />
+        </video>
+        <div
+          className="
+    absolute inset-0
+    bg-gradient-to-b from-transparent to-white/30 dark:to-gray-900/95 
+    backdrop-blur-[3px]
+  "
+        />
+        {/* <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.18),transparent_65%)]" /> */}
+        <div
+          className="
+            absolute inset-0  
+            bg-gradient-to-b
+            from-white/10
+            via-white/30
+            to-black/55
+            sm:from-white/15 sm:via-white/35 sm:to-black/60
+            dark:from-black/70 dark:via-black/40 dark:to-black/90
+            backdrop-blur-[3px]
+          "
+        />
+        {/* <div
+          className="
+    absolute inset-0
+    bg-gradient-to-b
+    from-black/40
+    via-black/20
+    to-white/40
+    sm:from-black/30 sm:via-black/10 sm:to-white/30
+    dark:from-black/70 dark:via-black/40 dark:to-black/90
+    backdrop-blur-[3px]
+  "
+        /> */}
+        <div className="relative z-10 container py-20 py-24 sm:py-28 md:py-32 lg:py-36">
           <div className="max-w-3xl mx-auto text-center space-y-8 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium backdrop-blur">
               <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
               Plateforme d'échange crypto à Madagascar
             </div>
 
-            <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight">
+            <h1 className="font-display text-4xl sm:text-6xl md:text-xl  lg:text-7xl text-gray-950  dark:text-gray-300 font-bold leading-tight">
               Achetez et vendez vos{" "}
               <span className="text-accent">cryptomonnaies</span> via Mobile
               Money
             </h1>
 
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            <h3 className="text-lg sm:text-xs md:text-xl text-neutral-900/80   max-w-2xl mx-auto dark:text-gray-400">
               Échangez USDT, Bitcoin, Tron et Litecoin facilement avec MVola ou
               Orange Money. Transactions sécurisées et validées par notre
               équipe.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            </h3>
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center justify-center gap-4">
               <Button size="xl" variant="hero" asChild>
                 <Link to="/register">
                   Faire un échange
@@ -109,30 +151,29 @@ export default function Index() {
 
             <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-accent" />
-                <span>Sécurisé</span>
+                <CheckCircle2 className="h-4 w-4 text-accent " />
+                <span className="text-gray-300">Sécurisé</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-accent" />
-                <span>Sans frais cachés</span>
+                <span className="text-gray-300">Sans frais cachés</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-accent" />
-                <span>Support 7j/7</span>
+                <span className="text-gray-300">Support 7j/7</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
       <section id="features" className="py-20 bg-card">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
               Pourquoi choisir <span className="text-accent">Seramoney</span> ?
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto lg:text-lg">
               Une solution simple et sécurisée pour échanger vos cryptomonnaies
               à Madagascar.
             </p>
@@ -159,7 +200,6 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Cryptos Section */}
       <section id="cryptos" className="py-20">
         <div className="container">
           <div className="text-center mb-12">
@@ -187,7 +227,6 @@ export default function Index() {
         </div>
       </section>
 
-      {/* How it works */}
       <section id="how-it-works" className="py-20 bg-card">
         <div className="container">
           <div className="text-center mb-12">
@@ -236,7 +275,6 @@ export default function Index() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20 gradient-primary text-primary-foreground">
         <div className="container text-center">
           <div className="max-w-2xl mx-auto space-y-6">
