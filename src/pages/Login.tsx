@@ -1,121 +1,166 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/contexts/AuthContext";
-import { Wallet, Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck, LogIn, Eye, EyeOff } from "lucide-react";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, LoginFormValues } from "@/hooks/zodSchema";
+const animatedButton =
+  "group relative flex items-center justify-center gap-2 transition-all pr-8";
+
+const animatedIcon =
+  "opacity-0 translate-x-1 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300";
 
 export default function Login() {
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
+  const onSubmit = async (data: LoginFormValues) => {
     try {
-      await login(identifier, password);
-      // Check if admin by email
-      if (identifier.includes("admin")) {
+      await login(data.identifier, data.password);
+
+      if (data.identifier.includes("admin")) {
         navigate("/admin");
       } else {
         navigate("/dashboard");
       }
-    } catch (err) {
-      setError("Identifiants incorrects. Veuillez réessayer.");
-    } finally {
-      setIsLoading(false);
+    } catch {
+      throw new Error("Identifiants incorrects");
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
-      <main className="flex-1 flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md space-y-8 animate-fade-in">
-          {/* Logo */}
-          <div className="text-center">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary mb-4">
-              <Wallet className="h-8 w-8 text-accent" />
-            </div>
+
+      <main className="flex flex-1 items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="mb-8 text-center space-y-3">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-3 justify-center"
+            >
+              <img
+                src="/src/assets/logoSera.png"
+                alt="Seramoney"
+                className="h-12 w-12 object-contain"
+              />
+              <span className="font-display text-4xl font-bold">
+                Sera<span className="text-accent">money</span>
+              </span>
+            </Link>
+
             <h1 className="font-display text-2xl font-bold">Connexion</h1>
-            <p className="text-muted-foreground mt-2">
-              Accédez à votre compte Seramoney
+            <p className="text-sm text-muted-foreground">
+              Accédez à votre compte en toute sécurité
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6 p-8 rounded-2xl bg-card border border-border">
-            {error && (
-              <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {error}
+          <div className="rounded-2xl border border-border bg-muted p-8 shadow-sm">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-2">
+                <Label>Email ou numéro Mobile Money</Label>
+                <Input
+                  placeholder="email@exemple.com ou 034 12 345 67"
+                  {...register("identifier")}
+                />
+                {errors.identifier && (
+                  <p className="text-sm text-destructive">
+                    {errors.identifier.message}
+                  </p>
+                )}
               </div>
-            )}
+              <div className="space-y-2">
+                <Label>Mot de passe</Label>
 
-            <div className="space-y-2">
-              <Label htmlFor="identifier">Email ou Numéro Mobile Money</Label>
-              <Input
-                id="identifier"
-                type="text"
-                placeholder="email@exemple.com ou 034 12 345 67"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                required
-              />
-            </div>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    {...register("password")}
+                    className="pr-10"
+                  />
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                    aria-label={
+                      showPassword
+                        ? "Masquer le mot de passe"
+                        : "Afficher le mot de passe"
+                    }
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
 
-            <Button type="submit" variant="accent" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Connexion...
-                </>
-              ) : (
-                "Se connecter"
-              )}
-            </Button>
+                {errors.password && (
+                  <p className="text-sm text-destructive">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
 
-            <div className="text-center text-sm">
-              <Link to="/forgot-password" className="text-accent hover:underline">
-                Mot de passe oublié ?
-              </Link>
-            </div>
-          </form>
+              <Button
+                type="submit"
+                size="lg"
+                variant="accent"
+                className={`w-full ${animatedButton}`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Connexion...
+                  </>
+                ) : (
+                  <>
+                    <span className="">Se connecter</span>
+                    <LogIn className={`h-4 w-4 ${animatedIcon}`} />
+                  </>
+                )}
+              </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
+              <div className="text-center text-sm">
+                <Link
+                  to="/forgot-password"
+                  className="text-blue-900 dark:text-accent hover:underline"
+                >
+                  Mot de passe oublié ?
+                </Link>
+              </div>
+            </form>
+          </div>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Pas encore de compte ?{" "}
-            <Link to="/register" className="text-accent font-medium hover:underline">
+            <Link
+              to="/register"
+              className="text-accent font-medium hover:underline"
+            >
               S'inscrire
             </Link>
           </p>
-
-          {/* Demo hint */}
-          <div className="p-4 rounded-lg bg-muted text-sm text-center">
-            <p className="text-muted-foreground">
-              <strong>Démo:</strong> Utilisez n'importe quel email pour tester.
-              <br />
-              Ajoutez "admin" dans l'email pour accéder au Back Office.
-            </p>
+          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-accent" />
+            Connexion sécurisée – validation manuelle Seramoney
           </div>
         </div>
       </main>

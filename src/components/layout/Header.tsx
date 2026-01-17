@@ -1,4 +1,4 @@
-  import { Link, useNavigate } from "react-router-dom";
+    import { Link, useNavigate } from "react-router-dom";
   import { Button } from "@/components/ui/button";
   import { useTheme } from "@/contexts/ThemeContext";
   import { useAuth } from "@/contexts/AuthContext";
@@ -40,7 +40,7 @@ const animatedIcon =
       >
         <div className="container flex h-16 text- items-center justify-between">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-11 w-1h-11 rounded-lg overflow-hidden bg-primary/10 flex items-center justify-center">
+            <div className="h-11 w-11 rounded-3xl overflow-hidden bg-primary/10 flex items-center justify-center">
               <img
                 src="/src/assets/logoSera.png"
                 alt="Seramoney"
