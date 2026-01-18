@@ -78,27 +78,24 @@ const animatedIcon =
               <>
                 <Link
                   to={isAdmin ? "/admin" : "/dashboard"}
-                  className="text-sm  font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className={`${navLink}`}
                 >
                   Tableau de bord
                 </Link>
                 {!isAdmin && (
                   <>
-                    <Link
-                      to="/buy"
-                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
+                    <Link to="/buy" className={`${navLink}`}>
                       Acheter
                     </Link>
                     <Link
                       to="/sell"
-                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      className={`${navLink}`}
                     >
                       Vendre
                     </Link>
                     <Link
                       to="/history"
-                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      className={`${navLink}`}
                     >
                       Historique
                     </Link>

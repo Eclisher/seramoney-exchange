@@ -52,21 +52,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar transform transition-transform duration-200 lg:relative lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
-            <Link to="/admin" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
-                <Wallet className="h-5 w-5 text-sidebar-primary-foreground" />
-              </div>
-              <span className="font-display text-xl font-bold text-sidebar-foreground">
-                Sera<span className="text-sidebar-primary">money</span>
+            <Link
+              to="/admin"
+              className="inline-flex items-center gap-3 justify-center"
+            >
+              <img
+                src="/src/assets/logoSera.png"
+                alt="Seramoney"
+                className="h-12 w-12 object-contain"
+              />
+              <span className="font-display text-white text-3xl font-bold">
+                Sera<span className="text-accent">money</span>
               </span>
             </Link>
           </div>
@@ -97,7 +100,11 @@ export default function AdminDashboard() {
               className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
               onClick={toggleTheme}
             >
-              {theme === "light" ? <Moon className="h-5 w-5 mr-3" /> : <Sun className="h-5 w-5 mr-3" />}
+              {theme === "light" ? (
+                <Moon className="h-5 w-5 mr-3" />
+              ) : (
+                <Sun className="h-5 w-5 mr-3" />
+              )}
               {theme === "light" ? "Mode sombre" : "Mode clair"}
             </Button>
             <Button
@@ -133,10 +140,14 @@ export default function AdminDashboard() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="font-display text-lg font-semibold">Administration</h1>
+            <h1 className="font-display text-lg font-semibold">
+              Administration
+            </h1>
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-sm font-medium text-accent">{user?.name?.[0]}</span>
+                <span className="text-sm font-medium text-accent">
+                  {user?.name?.[0]}
+                </span>
               </div>
             </div>
           </div>
@@ -146,14 +157,21 @@ export default function AdminDashboard() {
         <main className="flex-1 p-4 lg:p-8">
           <div className="mb-8">
             <h2 className="font-display text-2xl font-bold">Dashboard</h2>
-            <p className="text-muted-foreground">Vue d'ensemble des activités</p>
+            <p className="text-muted-foreground">
+              Vue d'ensemble des activités
+            </p>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((stat, index) => (
-              <div key={index} className="p-6 rounded-2xl bg-card border border-border">
-                <div className={`h-10 w-10 rounded-xl ${stat.color} flex items-center justify-center mb-4`}>
+              <div
+                key={index}
+                className="p-6 rounded-2xl bg-card border border-border"
+              >
+                <div
+                  className={`h-10 w-10 rounded-xl ${stat.color} flex items-center justify-center mb-4`}
+                >
                   <stat.icon className="h-5 w-5" />
                 </div>
                 <p className="text-3xl font-bold">{stat.value}</p>
@@ -172,7 +190,10 @@ export default function AdminDashboard() {
             </div>
             <div className="divide-y divide-border">
               {recentRequests.map((req) => (
-                <div key={req.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                <div
+                  key={req.id}
+                  className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                >
                   <div>
                     <p className="font-medium">{req.client}</p>
                     <p className="text-sm text-muted-foreground">
@@ -181,11 +202,13 @@ export default function AdminDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="font-medium">{req.amount}</p>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      req.status === "EN_ATTENTE" 
-                        ? "bg-warning/10 text-warning" 
-                        : "bg-blue-500/10 text-blue-500"
-                    }`}>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        req.status === "EN_ATTENTE"
+                          ? "bg-warning/10 text-warning"
+                          : "bg-blue-500/10 text-blue-500"
+                      }`}
+                    >
                       {req.status === "EN_ATTENTE" ? "En attente" : "Payé"}
                     </span>
                   </div>

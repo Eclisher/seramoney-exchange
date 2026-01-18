@@ -17,6 +17,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminRequests from "./pages/admin/AdminRequests";
 import AdminUsers from "./pages/admin/AdminUsers";
 import NotFound from "./pages/NotFound";
+import ForgoPasswword from "./pages/ForgotPassword";
+import ResetPasswword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +68,8 @@ function AppRoutes() {
       <Route path="/" element={<Index />} />
       
       <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+      <Route path="/forgot-password" element={<GuestRoute><ForgoPasswword /></GuestRoute>} />
+      <Route path="/reset-password" element={<GuestRoute> <ResetPasswword/></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
       
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
