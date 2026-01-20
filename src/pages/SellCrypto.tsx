@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowDownRight, Info, Loader2, CheckCircle2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 type Crypto = "USDT" | "BTC" | "TRX" | "LTC";
 type Network = "TRC20" | "BEP20" | "BTC" | "LTC";
@@ -50,18 +51,49 @@ export default function SellCrypto() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setSuccess(true);
-    toast({
-      title: "Demande envoyée !",
-      description: "Votre demande de vente a été soumise avec succès.",
-    });
+    try {
+      const amountCryptoFloat = parseFloat(cryptoAmount);
+      const amountAriaryFloat = parseFloat(amountAr.replace(/\s/g, ""));
 
-    setTimeout(() => {
-      navigate("/history");
-    }, 2000);
+      if (isNaN(amountCryptoFloat) || amountCryptoFloat < 0.000001) {
+        toast({
+          title: "Erreur",
+          description: "Le montant minimum est de 0.000001",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await api.post("/transactions", {
+        type: "VENTE",
+        crypto,
+        network,
+        amount_crypto: amountCryptoFloat,
+        amount_ariary: amountAriaryFloat,
+        notes: "",
+      });
+
+      setSuccess(true);
+      toast({
+        title: "Demande envoyée !",
+        description: response.data.message || "Votre demande de vente a été soumise avec succès.",
+      });
+
+      setTimeout(() => {
+        navigate("/history");
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Erreur lors de l'envoi de la demande";
+      toast({
+        title: "Erreur",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (success) {
@@ -177,7 +209,7 @@ export default function SellCrypto() {
                   <div>
                     <p className="font-medium text-sm">Paiement vers votre Mobile Money</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      <span className="font-medium text-foreground">{user?.mobileMoneyType}</span>: {user?.phone}
+                      <span className="font-medium text-foreground">{user?.phone_number}</span>
                     </p>
                   </div>
                 </div>

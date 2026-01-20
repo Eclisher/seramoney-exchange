@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff, ShieldCheck, LogIn } from "lucide-react";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { resetPasswordSchema, ResetPasswordFormValues } from "@/hooks/zodSchema";
+import api from "@/lib/api";
 
-type ResetPasswordForm = {
-  password: string;
-  confirmPassword: string;
-};
 const animatedButton =
   "group relative flex items-center justify-center gap-2 transition-all pr-8";
 
@@ -19,19 +19,56 @@ const animatedIcon =
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const { token } = useParams<{ token: string }>();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<ResetPasswordForm>();
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
 
-  const onSubmit = async (data: ResetPasswordForm) => {
-    if (data.password !== data.confirmPassword) return;
+  useEffect(() => {
+    if (!token) {
+      toast.error("Token manquant", {
+        description: "Le lien de réinitialisation est invalide.",
+      });
+      navigate("/forgot-password");
+    }
+  }, [token, navigate]);
 
-    navigate("/login");
+  const onSubmit = async (data: ResetPasswordFormValues) => {
+    if (!token) {
+      setResetError("Token manquant");
+      return;
+    }
+
+    setResetError(null);
+    try {
+      await api.post(`/auth/reset-password/${token}`, {
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
+      
+      toast.success("Mot de passe réinitialisé !", {
+        description: "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+      });
+      
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Erreur lors de la réinitialisation";
+      setResetError(errorMessage);
+      toast.error("Erreur", {
+        description: errorMessage,
+      });
+    }
   };
 
   return (
@@ -61,49 +98,84 @@ export default function ResetPassword() {
 
           <div className="rounded-2xl border bg-muted p-8">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {[
-                {
-                  label: "Nouveau mot de passe",
-                  show: showPassword,
-                  toggle: setShowPassword,
-                  field: "password",
-                },
-                {
-                  label: "Confirmer le mot de passe",
-                  show: showConfirm,
-                  toggle: setShowConfirm,
-                  field: "confirmPassword",
-                },
-              ].map((item) => (
-                <div key={item.field} className="space-y-2">
-                  <Label>{item.label}</Label>
-                  <div className="relative">
-                    <Input
-                      type={item.show ? "text" : "password"}
-                      {...register(item.field as any, { required: true })}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => item.toggle((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                    >
-                      {item.show ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
+              <div className="space-y-2">
+                <Label>Nouveau mot de passe</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    {...register("password")}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                    aria-label={
+                      showPassword
+                        ? "Masquer le mot de passe"
+                        : "Afficher le mot de passe"
+                    }
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
-              ))}
+                {errors.password && (
+                  <p className="text-sm text-destructive">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Confirmer le mot de passe</Label>
+                <div className="relative">
+                  <Input
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    {...register("confirmPassword")}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                    aria-label={
+                      showConfirm
+                        ? "Masquer la confirmation"
+                        : "Afficher la confirmation"
+                    }
+                  >
+                    {showConfirm ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              {resetError && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {resetError}
+                </div>
+              )}
 
               <Button
                 type="submit"
                 size="lg"
                 variant="accent"
                 className={`w-full flex gap-2 ${animatedButton}`}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !token}
               >
                 {isSubmitting ? (
                   <>

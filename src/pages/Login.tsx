@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldCheck, LogIn, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,9 +18,11 @@ const animatedIcon =
   "opacity-0 translate-x-1 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const hasShownToast = useRef(false);
   const {
     register,
     handleSubmit,
@@ -28,17 +31,33 @@ export default function Login() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
-    try {
-      await login(data.identifier, data.password);
-
-      if (data.identifier.includes("admin")) {
+  useEffect(() => {
+    if (user && !hasShownToast.current) {
+      hasShownToast.current = true;
+      toast.success("Connexion réussie !", {
+        description: `Bienvenue ${user.full_name} !`,
+        duration: 4000,
+      });
+      
+      if (user.role === "ADMIN") {
         navigate("/admin");
       } else {
         navigate("/dashboard");
       }
-    } catch {
-      throw new Error("Identifiants incorrects");
+    }
+  }, [user, navigate]);
+
+  const onSubmit = async (data: LoginFormValues) => {
+    setLoginError(null);
+    hasShownToast.current = false;
+    try {
+      await login(data.identifier, data.password);
+    } catch (error: any) {
+      setLoginError(error.message || "Identifiants incorrects");
+      toast.error("Erreur de connexion", {
+        description: error.message || "Identifiants incorrects",
+        duration: 5000,
+      });
     }
   };
 
@@ -118,6 +137,12 @@ export default function Login() {
                   </p>
                 )}
               </div>
+
+              {loginError && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {loginError}
+                </div>
+              )}
 
               <Button
                 type="submit"

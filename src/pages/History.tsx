@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CryptoIcon } from "@/components/crypto/CryptoIcon";
-import { ArrowUpRight, ArrowDownRight, History as HistoryIcon, Filter } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, History as HistoryIcon, Filter, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,64 +10,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getMyTransactions } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Mock transactions
-const allTransactions = [
-  { 
-    id: "TXN001", 
-    type: "ACHAT" as const, 
-    crypto: "USDT" as const, 
-    network: "TRC20",
-    amountCrypto: "21.74",
-    amountAr: "100 000", 
-    walletAddress: "TXyz...abc123",
-    status: "TERMINE" as const, 
-    date: "10/01/2024 14:30" 
-  },
-  { 
-    id: "TXN002", 
-    type: "VENTE" as const, 
-    crypto: "BTC" as const, 
-    network: "BTC",
-    amountCrypto: "0.001",
-    amountAr: "450 000", 
-    status: "EN_ATTENTE" as const, 
-    date: "09/01/2024 10:15" 
-  },
-  { 
-    id: "TXN003", 
-    type: "ACHAT" as const, 
-    crypto: "TRX" as const, 
-    network: "TRC20",
-    amountCrypto: "90.91",
-    amountAr: "50 000", 
-    walletAddress: "TQwer...xyz789",
-    status: "CRYPTO_ENVOYEE" as const, 
-    date: "08/01/2024 16:45" 
-  },
-  { 
-    id: "TXN004", 
-    type: "VENTE" as const, 
-    crypto: "USDT" as const, 
-    network: "BEP20",
-    amountCrypto: "50",
-    amountAr: "225 000", 
-    status: "PAYE" as const, 
-    date: "07/01/2024 09:00" 
-  },
-  { 
-    id: "TXN005", 
-    type: "ACHAT" as const, 
-    crypto: "LTC" as const, 
-    network: "LTC",
-    amountCrypto: "0.5",
-    amountAr: "230 000", 
-    walletAddress: "ltc1q...def456",
-    status: "REFUSE" as const, 
-    date: "05/01/2024 11:20" 
-  },
-];
+interface Transaction {
+  id: string;
+  user_id: string;
+  type: "ACHAT" | "VENTE";
+  crypto: string;
+  network: string;
+  amount_crypto: string;
+  amount_ariary: string;
+  wallet_address: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  reference: string;
+}
 
 const statusColors: Record<string, string> = {
   EN_ATTENTE: "bg-warning/10 text-warning border-warning/20",
@@ -86,10 +47,43 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function History() {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<"all" | "ACHAT" | "VENTE">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filteredTransactions = allTransactions.filter((tx) => {
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        const data = await getMyTransactions();
+        setTransactions(data);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des transactions:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [user]);
+
+  // Formater la date pour l'affichage
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const filteredTransactions = transactions.filter((tx) => {
     if (typeFilter !== "all" && tx.type !== typeFilter) return false;
     if (statusFilter !== "all" && tx.status !== statusFilter) return false;
     return true;
@@ -146,7 +140,12 @@ export default function History() {
 
           {/* Transactions List */}
           <div className="space-y-4 animate-slide-up">
-            {filteredTransactions.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12 rounded-2xl bg-card border border-border">
+                <Loader2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-spin" />
+                <p className="text-muted-foreground">Chargement des transactions...</p>
+              </div>
+            ) : filteredTransactions.length === 0 ? (
               <div className="text-center py-12 rounded-2xl bg-card border border-border">
                 <HistoryIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">Aucune transaction trouvée</p>
@@ -176,35 +175,37 @@ export default function History() {
                           }`}>
                             {tx.type}
                           </span>
-                          <CryptoIcon crypto={tx.crypto} size="sm" />
+                          {(tx.crypto === "USDT" || tx.crypto === "BTC" || tx.crypto === "TRX" || tx.crypto === "LTC") && (
+                            <CryptoIcon crypto={tx.crypto as "USDT" | "BTC" | "TRX" | "LTC"} size="sm" />
+                          )}
                           <span className="font-semibold">{tx.crypto}</span>
                           <span className="text-muted-foreground text-sm">({tx.network})</span>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Réf: {tx.id} • {tx.date}
+                          Réf: {tx.reference} • {formatDate(tx.created_at)}
                         </p>
                       </div>
                     </div>
 
                     {/* Amounts */}
                     <div className="md:text-right">
-                      <p className="font-bold">{tx.amountCrypto} {tx.crypto}</p>
-                      <p className="text-sm text-muted-foreground">{tx.amountAr} Ar</p>
+                      <p className="font-bold">{parseFloat(tx.amount_crypto)} {tx.crypto}</p>
+                      <p className="text-sm text-muted-foreground">{parseFloat(tx.amount_ariary).toLocaleString("fr-FR")} Ar</p>
                     </div>
 
                     {/* Status */}
                     <div>
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold border ${statusColors[tx.status]}`}>
-                        {statusLabels[tx.status]}
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold border ${statusColors[tx.status] || "bg-muted text-muted-foreground border-muted"}`}>
+                        {statusLabels[tx.status] || tx.status}
                       </span>
                     </div>
                   </div>
 
                   {/* Wallet address for purchases */}
-                  {tx.type === "ACHAT" && tx.walletAddress && (
+                  {tx.type === "ACHAT" && tx.wallet_address && (
                     <div className="mt-4 pt-4 border-t border-border">
                       <p className="text-sm text-muted-foreground">
-                        Wallet: <span className="font-mono text-foreground">{tx.walletAddress}</span>
+                        Wallet: <span className="font-mono text-foreground">{tx.wallet_address}</span>
                       </p>
                     </div>
                   )}

@@ -13,9 +13,9 @@ import {
   CheckCircle2,
   Wallet,
   Send,
-  Clock,
   BadgeCheck,
 } from "lucide-react";
+import { scrollToId } from "@/lib/utils";
 
 const features = [
   {
@@ -132,9 +132,9 @@ export default function Index() {
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
-              <Button size="xl" variant="hero-outline" asChild>
-                <Link to="#how-it-works">Comment ça marche</Link>
-              </Button>
+              <Button size="xl" onClick={() => scrollToId("how-it-works")} variant="hero-outline" asChild>
+                <Link to="">Comment ça marche ?</Link>
+                </Button>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-muted-foreground">

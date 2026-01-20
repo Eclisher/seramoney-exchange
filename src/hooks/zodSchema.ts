@@ -24,5 +24,21 @@ export const registerSchema = z
     message: "Les mots de passe ne correspondent pas",
   });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Email invalide"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+    confirmPassword: z.string().min(6),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Les mots de passe ne correspondent pas",
+  });
+
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 export type LoginFormValues = z.infer<typeof loginSchema>;
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

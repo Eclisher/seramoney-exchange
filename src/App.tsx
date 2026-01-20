@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -69,7 +70,7 @@ function AppRoutes() {
       
       <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
       <Route path="/forgot-password" element={<GuestRoute><ForgoPasswword /></GuestRoute>} />
-      <Route path="/reset-password" element={<GuestRoute> <ResetPasswword/></GuestRoute>} />
+      <Route path="/reset-password/:token" element={<GuestRoute> <ResetPasswword/></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
       
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -90,13 +91,15 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
+        <NotificationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </TooltipProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

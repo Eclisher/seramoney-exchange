@@ -1,18 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import api from "@/lib/api";
 
 interface User {
   id: string;
-  name: string;
+  full_name: string;
   email: string;
-  phone: string;
-  mobileMoneyType: "MVola" | "OrangeMoney";
-  role: "client" | "admin";
+  phone_number: string;
+  role: "ADMIN" | "CLIENT" | string;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -27,71 +27,90 @@ interface RegisterData {
   password: string;
 }
 
+const formatPhone = (phone: string) => {
+  return phone.replace(/\s+/g, "").replace(/^(\+261|261)/, "0");
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock user for demo
-const mockClient: User = {
-  id: "1",
-  name: "Jean Rakoto",
-  email: "jean@example.com",
-  phone: "034 12 345 67",
-  mobileMoneyType: "MVola",
-  role: "client",
-};
-
-const mockAdmin: User = {
-  id: "2",
-  name: "Admin Seramoney",
-  email: "admin@seramoney.mg",
-  phone: "034 00 000 00",
-  mobileMoneyType: "MVola",
-  role: "admin",
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored session
-    const stored = localStorage.getItem("seramoney-user");
-    if (stored) {
-      setUser(JSON.parse(stored));
+    const storedUser = localStorage.getItem("seramoney-user");
+    const storedToken = localStorage.getItem("seramoney-token");
+    
+    if (storedUser && storedToken) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error("Error parsing stored user:", error);
+        localStorage.removeItem("seramoney-user");
+        localStorage.removeItem("seramoney-token");
+      }
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, _password: string) => {
+  const login = async (identifier: string, password: string) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    const loggedUser = email.includes("admin") ? mockAdmin : mockClient;
-    setUser(loggedUser);
-    localStorage.setItem("seramoney-user", JSON.stringify(loggedUser));
-    setIsLoading(false);
+    try {
+      const isEmail = identifier.includes("@");
+      
+      const requestBody = isEmail
+        ? { email: identifier, password }
+        : { phone_number: identifier, password };
+
+      const response = await api.post("/auth/login", requestBody);
+      
+      const { token, user: userData } = response.data;
+      
+      localStorage.setItem("seramoney-token", token);
+      localStorage.setItem("seramoney-user", JSON.stringify(userData));
+      
+      setUser(userData);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Erreur de connexion";
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const register = async (data: RegisterData) => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      mobileMoneyType: data.mobileMoneyType,
-      role: "client",
-    };
-    setUser(newUser);
-    localStorage.setItem("seramoney-user", JSON.stringify(newUser));
-    setIsLoading(false);
+    try {
+      const response = await api.post("/auth/register", {
+        full_name: data.name.trim(),
+        phone_number: formatPhone(data.phone),
+        email: data.email.trim().toLowerCase(),
+        mobile_money_type: data.mobileMoneyType,
+        password: data.password,
+        
+      });
+
+      if (response.data.token) {
+        const { token, user: userData } = response.data;
+        localStorage.setItem("seramoney-token", token);
+        localStorage.setItem("seramoney-user", JSON.stringify(userData));
+        setUser(userData);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Erreur lors de l'inscription";
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("seramoney-user");
+    localStorage.removeItem("seramoney-token");
   };
 
   return (
@@ -103,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         isAuthenticated: !!user,
-        isAdmin: user?.role === "admin",
+        isAdmin: user?.role === "ADMIN",
       }}
     >
       {children}
@@ -118,3 +137,4 @@ export function useAuth() {
   }
   return context;
 }
+

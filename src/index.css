@@ -234,6 +234,21 @@ html {
   to { opacity: 1; }
 }
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.2s ease-out;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
@@ -261,4 +276,77 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/50;
+}
+
+/* Toast styling improvements */
+[data-sonner-toaster] {
+  --width: 356px;
+  --toast-gap: 8px;
+}
+
+[data-sonner-toast] {
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 38px -10px rgba(22, 23, 24, 0.35), 0 10px 20px -15px rgba(22, 23, 24, 0.2);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 16px;
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toastIn {
+  from {
+    transform: translateX(calc(100% + 16px));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+[data-sonner-toast][data-styled="true"] {
+  background: var(--background);
+  border: 1px solid var(--border);
+}
+
+[data-sonner-toast][data-type="success"] {
+  background: rgb(240 253 244) !important;
+  border-color: rgb(187 247 208) !important;
+  color: rgb(20 83 45) !important;
+}
+
+.dark [data-sonner-toast][data-type="success"] {
+  background: rgb(6 78 59 / 0.8) !important;
+  border-color: rgb(20 83 45) !important;
+  color: rgb(187 247 208) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background: rgb(254 242 242) !important;
+  border-color: rgb(254 202 202) !important;
+  color: rgb(153 27 27) !important;
+}
+
+.dark [data-sonner-toast][data-type="error"] {
+  background: rgb(127 29 29 / 0.8) !important;
+  border-color: rgb(153 27 27) !important;
+  color: rgb(254 202 202) !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+[data-sonner-toast] [data-title] {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 13px;
+  opacity: 0.9;
+  margin-top: 2px;
 }

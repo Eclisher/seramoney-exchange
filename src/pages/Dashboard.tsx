@@ -3,6 +3,8 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { getMyTransactions } from "@/lib/api";
+import { useEffect, useState, useMemo } from "react";
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -10,15 +12,25 @@ import {
   TrendingUp,
   Wallet,
   History,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from "lucide-react";
 
-// Mock data
-const recentTransactions = [
-  { id: "TXN001", type: "ACHAT", crypto: "USDT", amount: "100 000 Ar", status: "TERMINE", date: "10/01/2024" },
-  { id: "TXN002", type: "VENTE", crypto: "BTC", amount: "0.001 BTC", status: "EN_ATTENTE", date: "09/01/2024" },
-  { id: "TXN003", type: "ACHAT", crypto: "TRX", amount: "50 000 Ar", status: "CRYPTO_ENVOYEE", date: "08/01/2024" },
-];
+interface Transaction {
+  id: string;
+  user_id: string;
+  type: "ACHAT" | "VENTE";
+  crypto: string;
+  network: string;
+  amount_crypto: string;
+  amount_ariary: string;
+  wallet_address: string | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  reference: string;
+}
 
 const statusColors: Record<string, string> = {
   EN_ATTENTE: "bg-warning/10 text-warning",
@@ -38,6 +50,60 @@ const statusLabels: Record<string, string> = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoadingTransactions(true);
+        const data = await getMyTransactions();
+        setAllTransactions(data);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des transactions:", error);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [user]);
+
+  // Calculer les statistiques à partir de toutes les transactions
+  const stats = useMemo(() => {
+    const total = allTransactions.length;
+    const achats = allTransactions.filter(tx => tx.type === "ACHAT").length;
+    const ventes = allTransactions.filter(tx => tx.type === "VENTE").length;
+    const enAttente = allTransactions.filter(tx => tx.status === "EN_ATTENTE").length;
+
+    return { total, achats, ventes, enAttente };
+  }, [allTransactions]);
+
+  // Limiter à 3 transactions les plus récentes pour l'affichage
+  const recentTransactions = useMemo(() => {
+    return allTransactions.slice(0, 3);
+  }, [allTransactions]);
+
+  // Formater la date pour l'affichage
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  // Formater le montant pour l'affichage
+  const formatAmount = (tx: Transaction) => {
+    if (tx.type === "ACHAT") {
+      return `${parseFloat(tx.amount_ariary).toLocaleString("fr-FR")} Ar`;
+    } else {
+      return `${parseFloat(tx.amount_crypto)} ${tx.crypto}`;
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -45,17 +111,15 @@ export default function Dashboard() {
       
       <main className="flex-1 py-8">
         <div className="container">
-          {/* Welcome */}
           <div className="mb-8 animate-fade-in">
             <h1 className="font-display text-2xl md:text-3xl font-bold">
-              Bienvenue, {user?.name} 👋
+              Bienvenue, {user?.full_name} 👋
             </h1>
             <p className="text-muted-foreground mt-1">
               Gérez vos échanges de cryptomonnaies
             </p>
           </div>
 
-          {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <div className="p-6 rounded-2xl bg-card border border-border animate-slide-up">
               <div className="flex items-center justify-between mb-4">
@@ -63,7 +127,7 @@ export default function Dashboard() {
                   <TrendingUp className="h-5 w-5 text-accent" />
                 </div>
               </div>
-              <p className="text-2xl font-bold">3</p>
+              <p className="text-2xl font-bold">{isLoadingTransactions ? "..." : stats.total}</p>
               <p className="text-sm text-muted-foreground">Total échanges</p>
             </div>
 
@@ -73,7 +137,7 @@ export default function Dashboard() {
                   <ArrowUpRight className="h-5 w-5 text-success" />
                 </div>
               </div>
-              <p className="text-2xl font-bold">2</p>
+              <p className="text-2xl font-bold">{isLoadingTransactions ? "..." : stats.achats}</p>
               <p className="text-sm text-muted-foreground">Achats</p>
             </div>
 
@@ -83,7 +147,7 @@ export default function Dashboard() {
                   <ArrowDownRight className="h-5 w-5 text-blue-500" />
                 </div>
               </div>
-              <p className="text-2xl font-bold">1</p>
+              <p className="text-2xl font-bold">{isLoadingTransactions ? "..." : stats.ventes}</p>
               <p className="text-sm text-muted-foreground">Ventes</p>
             </div>
 
@@ -93,12 +157,11 @@ export default function Dashboard() {
                   <Clock className="h-5 w-5 text-warning" />
                 </div>
               </div>
-              <p className="text-2xl font-bold">1</p>
+              <p className="text-2xl font-bold">{isLoadingTransactions ? "..." : stats.enAttente}</p>
               <p className="text-sm text-muted-foreground">En attente</p>
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
             <Link
               to="/buy"
@@ -133,7 +196,6 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          {/* Recent Transactions */}
           <div className="rounded-2xl bg-card border border-border overflow-hidden">
             <div className="p-6 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -151,35 +213,44 @@ export default function Dashboard() {
             </div>
 
             <div className="divide-y divide-border">
-              {recentTransactions.map((tx) => (
-                <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                      tx.type === "ACHAT" ? "bg-success/10" : "bg-blue-500/10"
-                    }`}>
-                      {tx.type === "ACHAT" ? (
-                        <ArrowUpRight className={`h-5 w-5 ${tx.type === "ACHAT" ? "text-success" : "text-blue-500"}`} />
-                      ) : (
-                        <ArrowDownRight className="h-5 w-5 text-blue-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">{tx.type} {tx.crypto}</p>
-                      <p className="text-sm text-muted-foreground">{tx.id} • {tx.date}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{tx.amount}</p>
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[tx.status]}`}>
-                      {statusLabels[tx.status]}
-                    </span>
-                  </div>
+              {isLoadingTransactions ? (
+                <div className="p-8 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ))}
+              ) : recentTransactions.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>Aucune transaction récente</p>
+                </div>
+              ) : (
+                recentTransactions.map((tx) => (
+                  <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        tx.type === "ACHAT" ? "bg-success/10" : "bg-blue-500/10"
+                      }`}>
+                        {tx.type === "ACHAT" ? (
+                          <ArrowUpRight className={`h-5 w-5 ${tx.type === "ACHAT" ? "text-success" : "text-blue-500"}`} />
+                        ) : (
+                          <ArrowDownRight className="h-5 w-5 text-blue-500" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium">{tx.type} {tx.crypto}</p>
+                        <p className="text-sm text-muted-foreground">{tx.reference} • {formatDate(tx.created_at)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatAmount(tx)}</p>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[tx.status] || "bg-muted text-muted-foreground"}`}>
+                        {statusLabels[tx.status] || tx.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Mobile Money Info */}
           <div className="mt-8 p-6 rounded-2xl bg-muted border border-border">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
@@ -188,7 +259,7 @@ export default function Dashboard() {
               <div>
                 <h3 className="font-display font-semibold">Votre compte Mobile Money</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {user?.mobileMoneyType}: <span className="font-medium text-foreground">{user?.phone}</span>
+                  <span className="font-medium text-foreground">{user?.phone_number}</span>
                 </p>
               </div>
             </div>

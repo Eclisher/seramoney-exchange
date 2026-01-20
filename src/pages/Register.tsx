@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldCheck, LogIn, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,10 +26,12 @@ const animatedIcon =
   "opacity-0 translate-x-1 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300";
 
 export default function Register() {
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, user } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const hasShownToast = useRef(false);
   const {
     register,
     handleSubmit,
@@ -38,16 +41,40 @@ export default function Register() {
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: RegisterFormValues) => {
-    await registerUser({
-      name: data.name,
-      phone: data.phone,
-      mobileMoneyType: data.mobileMoneyType,
-      email: data.email,
-      password: data.password,
-    });
+  useEffect(() => {
+    if (user && !hasShownToast.current) {
+      hasShownToast.current = true;
+      toast.success("Inscription réussie !", {
+        description: `Bienvenue ${user.full_name} ! Votre compte a été créé avec succès.`,
+        duration: 4000,
+      });
+      
+      if (user.role === "ADMIN") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, navigate]);
 
-    navigate("/dashboard");
+  const onSubmit = async (data: RegisterFormValues) => {
+    setRegisterError(null);
+    hasShownToast.current = false;
+    try {
+      await registerUser({
+        name: data.name,
+        phone: data.phone,
+        mobileMoneyType: data.mobileMoneyType,
+        email: data.email,
+        password: data.password,
+      });
+    } catch (error: any) {
+      setRegisterError(error.message || "Erreur lors de l'inscription");
+      toast.error("Erreur d'inscription", {
+        description: error.message || "Erreur lors de l'inscription",
+        duration: 5000,
+      });
+    }
   };
 
   return (
@@ -195,6 +222,13 @@ export default function Register() {
                 </div>
               </div>
 
+              {registerError && (
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {registerError}
+                </div>
+              )}
+              
+
               <Button
                 type="submit"
                 size="lg"
@@ -205,7 +239,7 @@ export default function Register() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Creation...
+                    Création...
                   </>
                 ) : (
                   <>

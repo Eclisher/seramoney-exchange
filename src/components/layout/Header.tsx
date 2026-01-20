@@ -2,7 +2,7 @@
   import { Button } from "@/components/ui/button";
   import { useTheme } from "@/contexts/ThemeContext";
   import { useAuth } from "@/contexts/AuthContext";
-  import { Sun, Moon, Menu, X, Wallet, LogOut, User, LogIn } from "lucide-react";
+  import { Sun, Moon, Menu, X,  LogOut, User, LogIn } from "lucide-react";
   import { useState } from "react";
   import {
     DropdownMenu,
@@ -12,6 +12,7 @@
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu";
   import { scrollToId } from "@/lib/utils";
+  import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 
   export function Header() {
     const { theme, toggleTheme } = useTheme();
@@ -23,6 +24,21 @@
       logout();
       navigate("/");
     };
+
+    const handleScrollToSection = (id: string) => {
+      const currentPath = window.location.pathname;
+      if (currentPath !== "/") {
+        navigate("/");
+        // Attendre que la page se charge avant de scroller
+        setTimeout(() => {
+          scrollToId(id);
+        }, 100);
+      } else {
+        scrollToId(id);
+      }
+      setMobileMenuOpen(false);
+    };
+
   const navLink =
     "relative text-lg font-nav text-muted-foreground transition-colors hover:text-foreground after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0 after:bg-accent after:transition-all hover:after:w-full";
   const animatedButton =
@@ -119,6 +135,10 @@ const animatedIcon =
               )}
             </Button>
 
+            {isAuthenticated && !isAdmin && (
+              <NotificationDropdown />
+            )}
+
             {!isAuthenticated ? (
               <div className="hidden md:flex items-center gap-2">
                 <Button variant="ghost" asChild>
@@ -141,7 +161,7 @@ const animatedIcon =
                     <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
                       <User className="h-4 w-4 text-accent" />
                     </div>
-                    <span className="text-sm font-medium">{user?.name}</span>
+                    <span className="text-sm font-medium">{user?.full_name}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -190,67 +210,52 @@ const animatedIcon =
               animate-slide-down
             "
           >
-            <div className="container py-4 space-y-4">
-              <div className="flex flex-row gap-3">
-                <button
-                  onClick={() => scrollToId("features")}
-                  className={navLink}
-                >
-                  Fonctionnalités
-                </button>
-                <button
-                  onClick={() => scrollToId("cryptos")}
-                  className={navLink}
-                >
-                  Cryptos
-                </button>
-                <button
-                  onClick={() => scrollToId("how-it-works")}
-                  className={navLink}
-                >
-                  Comment ça marche
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Thème</span>
-                <Button variant="ghost" size="sm" onClick={toggleTheme}>
-                  {theme === "light" ? (
-                    <Moon className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Sun className="h-4 w-4 mr-2" />
-                  )}
-                  {theme === "light" ? "Sombre" : "Clair"}
-                </Button>
-              </div>
-
-              {!isAuthenticated ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="h-full w-full items-center justify-center"
+            <div className="container py-4 space-y-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
+              {!isAuthenticated && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Navigation
+                  </p>
+                  <button
+                    onClick={() => handleScrollToSection("features")}
+                    className="block w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
-                    <Link
-                      to="/login"
-                      className="block  py-2 text-sm font-medium"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Connexion
-                    </Link>
-                  </Button>
-                  <Button variant="accent" className="w-full" asChild>
-                    <Link
-                      to="/register"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      S'inscrire
-                    </Link>
-                  </Button>
-                </>
-              ) : (
-                <>
+                    Fonctionnalités
+                  </button>
+                  <button
+                    onClick={() => handleScrollToSection("cryptos")}
+                    className="block w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    Cryptos
+                  </button>
+                  <button
+                    onClick={() => handleScrollToSection("how-it-works")}
+                    className="block w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    Comment ça marche
+                  </button>
+                </div>
+              )}
+
+              {isAuthenticated && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 px-3 py-2 mb-3">
+                    <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                      <User className="h-5 w-5 text-accent" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{user?.full_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </div>
+                    {!isAdmin && (
+                      <div className="flex-shrink-0">
+                        <NotificationDropdown />
+                      </div>
+                    )}
+                  </div>
                   <Link
                     to={isAdmin ? "/admin" : "/dashboard"}
-                    className="block py-2 text-sm font-medium"
+                    className="block w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Tableau de bord
@@ -259,39 +264,81 @@ const animatedIcon =
                     <>
                       <Link
                         to="/buy"
-                        className="block py-2 text-sm font-medium"
+                        className="block w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Acheter Crypto
                       </Link>
                       <Link
                         to="/sell"
-                        className="block py-2 text-sm font-medium"
+                        className="block w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Vendre Crypto
                       </Link>
                       <Link
                         to="/history"
-                        className="block py-2 text-sm font-medium"
+                        className="block w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Historique
                       </Link>
                     </>
                   )}
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => {
-                      handleLogout();
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    Déconnexion
-                  </Button>
-                </>
+                </div>
               )}
+
+              <div className="border-t border-border pt-4 space-y-2">
+                <div className="flex items-center justify-between px-3">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Paramètres
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={toggleTheme}>
+                    {theme === "light" ? (
+                      <Moon className="h-4 w-4" />
+                    ) : (
+                      <Sun className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
+                {!isAuthenticated ? (
+                  <div className="space-y-2 px-3">
+                    <Button variant="ghost" className="w-full justify-start" asChild>
+                      <Link
+                        to="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Connexion
+                      </Link>
+                    </Button>
+                    <Button variant="accent" className="w-full" asChild>
+                      <Link
+                        to="/register"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        S'inscrire
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="px-3">
+                    <Button
+                      variant="destructive"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        handleLogout();
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Déconnexion
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

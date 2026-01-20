@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowUpRight, Info, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
 type Crypto = "USDT" | "BTC" | "TRX" | "LTC";
 type Network = "TRC20" | "BEP20" | "BTC" | "LTC";
@@ -49,18 +50,50 @@ export default function BuyCrypto() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setSuccess(true);
-    toast({
-      title: "Demande envoyée !",
-      description: "Votre demande d'achat a été soumise avec succès.",
-    });
+    try {
+      const amountAriaryFloat = parseFloat(amountAr);
+      const amountCryptoFloat = parseFloat(cryptoAmount);
 
-    setTimeout(() => {
-      navigate("/history");
-    }, 2000);
+      if (isNaN(amountAriaryFloat) || amountAriaryFloat < 10000) {
+        toast({
+          title: "Erreur",
+          description: "Le montant minimum est de 10 000 Ar",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await api.post("/transactions", {
+        type: "ACHAT",
+        crypto,
+        network,
+        amount_ariary: amountAriaryFloat,
+        amount_crypto: amountCryptoFloat,
+        wallet_address: walletAddress,
+        notes: "",
+      });
+
+      setSuccess(true);
+      toast({
+        title: "Demande envoyée !",
+        description: response.data.message || "Votre demande d'achat a été soumise avec succès.",
+      });
+
+      setTimeout(() => {
+        navigate("/history");
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Erreur lors de l'envoi de la demande";
+      toast({
+        title: "Erreur",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (success) {
