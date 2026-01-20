@@ -27,7 +27,6 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
         onLogout={handleLogout}
       />
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
         <AdminHeader
           title={title}
@@ -35,7 +34,6 @@ export function AdminLayout({ title, children }: AdminLayoutProps) {
           onLogout={handleLogout}
         />
 
-        {/* Content */}
         <main className="flex-1 p-4 lg:p-8">
           {children}
         </main>

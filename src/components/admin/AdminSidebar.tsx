@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { useNotifications } from "@/contexts/NotificationContext";
 import {
   LayoutDashboard,
@@ -27,7 +27,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const { unreadAdminCount } = useNotifications();
+  const { unreadAdminCount, markAllAsRead  } = useNotifications();
 
   return (
     <>
@@ -54,12 +54,10 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
             </Link>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               const showBadge = item.path === "/admin/requests" && unreadAdminCount > 0;
-              
               return (
                 <Link
                   key={item.path}
@@ -69,7 +67,12 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
                       ? "bg-sidebar-primary text-sidebar-primary-foreground"
                       : "text-sidebar-foreground hover:bg-sidebar-accent"
                   }`}
-                  onClick={onClose}
+                  onClick={() => {
+                    if (item.path === "/admin/requests") {
+                      markAllAsRead(); 
+                    }
+                    onClose();
+                  }}
                 >
                   <item.icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
@@ -83,7 +86,6 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
             })}
           </nav>
 
-          {/* User & Theme */}
           <div className="p-4 border-t border-sidebar-border space-y-4">
             <Button
               variant="ghost"
@@ -109,7 +111,6 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
         </div>
       </aside>
 
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"

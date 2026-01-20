@@ -59,7 +59,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [isAuthenticated, user]);
 
-  // Sauvegarder les notifications dans localStorage
   useEffect(() => {
     if (user?.role === "ADMIN") {
       localStorage.setItem(STORAGE_KEY_ADMIN, JSON.stringify(adminNotifications));
@@ -68,7 +67,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [adminNotifications, clientNotifications, user]);
 
-  // Vérifier les nouvelles demandes pour l'admin
   const checkAdminNotifications = useCallback(async () => {
     if (!user || user.role !== "ADMIN") return;
 
@@ -76,19 +74,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const response = await api.get("/admin/transactions");
       const transactions = response.data || [];
       
-      // Filtrer les nouvelles demandes (EN_ATTENTE)
       const newRequests = transactions.filter((tx: any) => tx.status === "EN_ATTENTE");
       
       const lastCheck = localStorage.getItem(LAST_CHECK_KEY_ADMIN);
       const lastCheckDate = lastCheck ? new Date(lastCheck) : new Date(0);
       
-      // Trouver les nouvelles demandes depuis la dernière vérification
       const notificationsToAdd: Notification[] = [];
       
       newRequests.forEach((tx: any) => {
         const txDate = new Date(tx.created_at);
         if (txDate > lastCheckDate) {
-          // Vérifier si une notification existe déjà
           const exists = adminNotifications.some(
             n => n.type === "new_request" && n.transactionId === tx.id
           );
@@ -116,7 +111,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [user, adminNotifications]);
 
-  // Vérifier les changements de statut pour le client
   const checkClientNotifications = useCallback(async () => {
     if (!user || user.role === "ADMIN") return;
 
@@ -129,12 +123,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const notificationsToAdd: Notification[] = [];
       
       transactions.forEach((tx: any) => {
-        // Vérifier si le statut a changé depuis la dernière vérification
         if (tx.updated_at && tx.status !== "EN_ATTENTE") {
           const updateDate = new Date(tx.updated_at);
           
           if (updateDate > lastCheckDate) {
-            // Vérifier si une notification existe déjà pour ce changement
             const exists = clientNotifications.some(
               n => n.type === "status_change" && 
                    n.transactionId === tx.id && 
@@ -173,7 +165,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [user, clientNotifications]);
 
-  // Vérifier les notifications toutes les 30 secondes
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
@@ -183,9 +174,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       } else {
         checkClientNotifications();
       }
-    }, 30000); // Vérifier toutes les 30 secondes
+    }, 30000);
 
-    // Vérifier immédiatement
     if (user.role === "ADMIN") {
       checkAdminNotifications();
     } else {
