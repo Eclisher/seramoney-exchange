@@ -14,9 +14,12 @@ import {
   Wallet,
   Send,
   BadgeCheck,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { scrollToId } from "@/lib/utils";
-
+import { useRef, useEffect, useState } from "react";
+import { CRYPTOS } from "@/config/cryptos";
 const features = [
   {
     icon: Shield,
@@ -43,12 +46,6 @@ const features = [
   },
 ];
 
-const cryptos = [
-  { crypto: "USDT" as const, name: "Tether", network: "TRC20 / BEP20" },
-  { crypto: "BTC" as const, name: "Bitcoin", network: "BTC Network" },
-  { crypto: "TRX" as const, name: "Tron", network: "TRC20" },
-  { crypto: "LTC" as const, name: "Litecoin", network: "LTC Network" },
-];
 
 const steps = [
   {
@@ -74,6 +71,36 @@ const steps = [
 ];
 
 export default function Index() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+  
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth);
+  };
+  
+  const scroll = (direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+  
+    el.scrollBy({
+      left: direction === "left" ? -250 : 250,
+      behavior: "smooth",
+    });
+  };
+  
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+  
+    checkScroll();
+    el.addEventListener("scroll", checkScroll);
+  
+    return () => el.removeEventListener("scroll", checkScroll);
+  }, []);
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -107,7 +134,7 @@ export default function Index() {
             backdrop-blur-[3px]
           "
         />
-        <div className="relative z-10 container py-20 py-24 sm:py-28 md:py-32 lg:py-36">
+        <div className="relative z-10 container  py-24 sm:py-28 md:py-32 lg:py-36">
           <div className="max-w-3xl mx-auto text-center space-y-8 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium backdrop-blur">
               <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
@@ -132,9 +159,14 @@ export default function Index() {
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
-              <Button size="xl" onClick={() => scrollToId("how-it-works")} variant="hero-outline" asChild>
+              <Button
+                size="xl"
+                onClick={() => scrollToId("how-it-works")}
+                variant="hero-outline"
+                asChild
+              >
                 <Link to="">Comment ça marche ?</Link>
-                </Button>
+              </Button>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-muted-foreground">
@@ -213,14 +245,69 @@ export default function Index() {
               des taux basés sur la plateforme leader mondiale.
             </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-            {cryptos.map((crypto) => (
-              <CryptoIcon
-                key={crypto.crypto}
-                symbol={crypto.crypto}
-                size="lg"
-              />
-            ))}
+          <div className="relative max-w-6xl mx-auto">
+            {/* Left Arrow */}
+            {canScrollLeft && (
+              <button
+                onClick={() => scroll("left")}
+                className="absolute -left-6 top-1/2 -translate-y-1/2 z-20 
+      h-12 w-12 rounded-full bg-background border 
+      flex items-center justify-center shadow-lg
+      hover:bg-accent/10 transition"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            )}
+
+            {/* Right Arrow */}
+            {canScrollRight && (
+              <button
+                onClick={() => scroll("right")}
+                className="absolute -right-6 top-1/2 -translate-y-1/2 z-20 
+      h-12 w-12 rounded-full bg-background border 
+      flex items-center justify-center shadow-lg
+      hover:bg-accent/10 transition"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            )}
+
+            <div
+              ref={scrollRef}
+              className="
+      flex gap-6 overflow-x-auto 
+      scroll-smooth pb-4
+      scrollbar-hide
+    "
+            >
+              {CRYPTOS.map((crypto) => (
+                <div
+                  key={crypto.symbol}
+                  className="
+          min-w-[140px]
+          p-6 rounded-2xl
+          border border-border
+          bg-card
+          flex flex-col items-center justify-center
+          transition hover:-translate-y-2 hover:shadow-xl
+        "
+                >
+                  <CryptoIcon symbol={crypto.symbol} size="lg" />
+
+                  <p className="mt-4 font-semibold">{crypto.symbol}</p>
+
+                  <p className="text-xs text-muted-foreground">{crypto.name}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Indicator */}
+            <div className="flex justify-center mt-4">
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Glissez pour voir plus</span>
+                <ChevronRight className="h-4 w-4 animate-pulse" />
+              </span>
+            </div>
           </div>
           <div className="mt-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <span>Propulsé par</span>
