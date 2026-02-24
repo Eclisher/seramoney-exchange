@@ -19,7 +19,7 @@ const animatedIcon =
 
 export default function Login() {
   const { login, user } = useAuth();
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const hasShownToast = useRef(false);
@@ -48,16 +48,29 @@ export default function Login() {
   }, [user, navigate]);
 
   const onSubmit = async (data: LoginFormValues) => {
+    if (loading) return;
+
     setLoginError(null);
-    hasShownToast.current = false;
+    setLoading(true);
+
     try {
       await login(data.identifier, data.password);
+
+      toast.success("Connexion réussie !");
     } catch (error: any) {
-      setLoginError(error.message || "Identifiants incorrects");
+      const message =
+        error?.message ||
+        error?.response?.data?.message ||
+        "Identifiants incorrects";
+
+      setLoginError(message);
+
       toast.error("Erreur de connexion", {
-        description: error.message || "Identifiants incorrects",
-        duration: 5000,
+        description: message,
+        duration: 4000,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -149,9 +162,9 @@ export default function Login() {
                 size="lg"
                 variant="accent"
                 className={`w-full ${animatedButton}`}
-                disabled={isSubmitting}
+                disabled={isSubmitting || loading}
               >
-                {isSubmitting ? (
+                {isSubmitting || loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Connexion...

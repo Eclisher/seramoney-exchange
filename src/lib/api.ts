@@ -1,8 +1,7 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000/api";
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -23,11 +22,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const requestUrl: string | undefined = error.config?.url;
+
+    const isAuthEndpoint =
+      requestUrl?.includes("/auth/login") ||
+      requestUrl?.includes("/auth/register");
+    if (status === 401 && !isAuthEndpoint) {
       localStorage.removeItem("seramoney-token");
       localStorage.removeItem("seramoney-user");
       window.location.href = "/login";
     }
+
     return Promise.reject(error);
   }
 );

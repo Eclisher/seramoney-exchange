@@ -56,25 +56,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (identifier: string, password: string) => {
     setIsLoading(true);
+
     try {
       const isEmail = identifier.includes("@");
-      
+
       const requestBody = isEmail
         ? { email: identifier, password }
         : { phone_number: identifier, password };
 
       const response = await api.post("/auth/login", requestBody);
-      
+      if (!response.data || response.data.success === false) {
+        throw new Error(response.data?.message || "Identifiants incorrects");
+      }
+
       const { token, user: userData } = response.data;
-      
+
       localStorage.setItem("seramoney-token", token);
       localStorage.setItem("seramoney-user", JSON.stringify(userData));
-      
+
       setUser(userData);
+
+      return userData;
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Erreur de connexion";
-      throw new Error(errorMessage);
+      throw new Error(
+        error?.response?.data?.message ||
+          error.message ||
+          "Erreur de connexion",
+      );
     } finally {
       setIsLoading(false);
     }
