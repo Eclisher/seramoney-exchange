@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { CryptoCard } from "@/components/crypto/CryptoIcon";
+import { CryptoIcon } from "@/components/crypto/CryptoIcon";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -215,11 +215,10 @@ export default function Index() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {cryptos.map((crypto) => (
-              <CryptoCard
+              <CryptoIcon
                 key={crypto.crypto}
-                crypto={crypto.crypto}
-                name={crypto.name}
-                network={crypto.network}
+                symbol={crypto.crypto}
+                size="lg"
               />
             ))}
           </div>

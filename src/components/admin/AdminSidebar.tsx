@@ -39,7 +39,7 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-sidebar-border">
             <Link
-              to="/admin"
+              to="/"
               className="inline-flex items-center gap-3 justify-center"
               onClick={onClose}
             >

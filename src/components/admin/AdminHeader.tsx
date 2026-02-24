@@ -33,7 +33,6 @@ export function AdminHeader({ title, onMenuClick, onLogout }: AdminHeaderProps) 
         </Button>
         <h1 className="font-display text-lg font-semibold truncate">{title}</h1>
         <div className="flex items-center gap-2 lg:gap-3">
-          {/* Mobile: Theme and Logout buttons */}
           <div className="flex items-center gap-2 lg:hidden">
             <Button
               variant="ghost"

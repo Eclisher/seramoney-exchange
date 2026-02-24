@@ -228,13 +228,13 @@ export function RequestsContent() {
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <CryptoIcon crypto={tx.crypto as any} size="sm" />
-                          <div>
-                            <p className="font-medium">{tx.crypto}</p>
-                            <p className="text-xs text-muted-foreground">{tx.network}</p>
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <CryptoIcon symbol={tx.crypto} size="sm" />
+                        <div>
+                          <p className="font-medium">{tx.crypto}</p>
+                          <p className="text-xs text-muted-foreground">{tx.network}</p>
                         </div>
+                      </div>
                       </td>
                       <td className="p-4">
                         <p className="font-medium">{parseFloat(tx.amount_crypto)} {tx.crypto}</p>

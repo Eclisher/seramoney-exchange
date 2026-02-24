@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -7,44 +7,114 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CryptoIcon } from "@/components/crypto/CryptoIcon";
 import { 
+  ArrowUpRight, 
+  Info, 
+  Loader2, 
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUpRight, Info, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import api from "@/lib/api";
-
-type Crypto = "USDT" | "BTC" | "TRX" | "LTC";
-type Network = "TRC20" | "BEP20" | "BTC" | "LTC";
-
-const rates: Record<Crypto, number> = {
-  USDT: 4600,
-  BTC: 460000000,
-  TRX: 550,
-  LTC: 460000,
-};
-
-const networkOptions: Record<Crypto, Network[]> = {
-  USDT: ["TRC20", "BEP20"],
-  BTC: ["BTC"],
-  TRX: ["TRC20"],
-  LTC: ["LTC"],
-};
+import api, { getMyTransactions } from "@/lib/api";
+import { CRYPTOS, CryptoConfig } from "@/config/cryptos";
 
 export default function BuyCrypto() {
-  const [crypto, setCrypto] = useState<Crypto>("USDT");
-  const [network, setNetwork] = useState<Network>("TRC20");
+  const [crypto, setCrypto] = useState<CryptoConfig>(CRYPTOS[0]);
+  const [network, setNetwork] = useState<string>(CRYPTOS[0].networks[0]);
   const [amountAr, setAmountAr] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [dailyUsedBuy, setDailyUsedBuy] = useState(0);
+  const [isLoadingLimits, setIsLoadingLimits] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const DAILY_BUY_LIMIT_USDT = 200;
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+  
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(
+      el.scrollLeft + el.clientWidth < el.scrollWidth
+    );
+  };
+  const scroll = (direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+  
+    const scrollAmount = 150;
+  
+    el.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+  
+    checkScroll();
+    el.addEventListener("scroll", checkScroll);
+  
+    return () => el.removeEventListener("scroll", checkScroll);
+  }, []);
+
+  useEffect(() => {
+    const fetchDailyLimits = async () => {
+      try {
+        setIsLoadingLimits(true);
+        const transactions = await getMyTransactions();
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const todayBuyTransactions = transactions.filter((tx: any) => {
+          if (tx.type !== "ACHAT") return false;
+          const txDate = new Date(tx.created_at);
+          txDate.setHours(0, 0, 0, 0);
+          return txDate.getTime() === today.getTime() && 
+                 (tx.status === "EN_ATTENTE" || tx.status === "PAYE" || tx.status === "TERMINE");
+        });
+        const usdtConfig = CRYPTOS.find(c => c.symbol === "USDT");
+        let totalUSDT = 0;
+        if (usdtConfig) {
+          todayBuyTransactions.forEach((tx: any) => {
+            const amountInUSDT = parseFloat(tx.amount_ariary) / usdtConfig.buyRate;
+            totalUSDT += amountInUSDT;
+          });
+        }
+
+        setDailyUsedBuy(totalUSDT);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des limites:", error);
+      } finally {
+        setIsLoadingLimits(false);
+      }
+    };
+
+    fetchDailyLimits();
+  }, []);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const cryptoAmount = amountAr ? (parseFloat(amountAr) / rates[crypto]).toFixed(6) : "0";
+  const cryptoAmount = amountAr
+    ? (parseFloat(amountAr) / crypto.buyRate).toFixed(6)
+    : "0";
+
+  const buyUsagePercent =
+    DAILY_BUY_LIMIT_USDT > 0
+      ? Math.min(100, (dailyUsedBuy / DAILY_BUY_LIMIT_USDT) * 100)
+      : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,9 +134,26 @@ export default function BuyCrypto() {
         return;
       }
 
+      const usdtConfig = CRYPTOS.find(c => c.symbol === "USDT");
+      if (usdtConfig) {
+        const amountInUSDT = amountAriaryFloat / usdtConfig.buyRate;
+        const totalAfterTransaction = dailyUsedBuy + amountInUSDT;
+
+        if (totalAfterTransaction > DAILY_BUY_LIMIT_USDT) {
+          const remaining = DAILY_BUY_LIMIT_USDT - dailyUsedBuy;
+          toast({
+            title: "Limite journalière atteinte",
+            description: `Vous avez déjà utilisé ${dailyUsedBuy.toFixed(2)} USDT aujourd'hui. Limite restante: ${remaining > 0 ? remaining.toFixed(2) : 0} USDT. La limite d'achat journalière est de ${DAILY_BUY_LIMIT_USDT} USDT.`,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const response = await api.post("/transactions", {
         type: "ACHAT",
-        crypto,
+        crypto: crypto.symbol,
         network,
         amount_ariary: amountAriaryFloat,
         amount_crypto: amountCryptoFloat,
@@ -77,7 +164,9 @@ export default function BuyCrypto() {
       setSuccess(true);
       toast({
         title: "Demande envoyée !",
-        description: response.data.message || "Votre demande d'achat a été soumise avec succès.",
+        description:
+          response.data.message ||
+          "Votre demande d'achat a été soumise avec succès.",
       });
 
       setTimeout(() => {
@@ -86,9 +175,22 @@ export default function BuyCrypto() {
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || "Erreur lors de l'envoi de la demande";
+      
+      const isLimitError = 
+        errorMessage.toLowerCase().includes("limite") ||
+        errorMessage.toLowerCase().includes("limit") ||
+        errorMessage.toLowerCase().includes("daily") ||
+        errorMessage.toLowerCase().includes("journalière") ||
+        errorMessage.toLowerCase().includes("journalier") ||
+        error.response?.status === 400;
+
       toast({
-        title: "Erreur",
-        description: errorMessage,
+        title: isLimitError ? "Limite journalière atteinte" : "Erreur",
+        description: isLimitError 
+          ? errorMessage.includes("limite") || errorMessage.includes("limit")
+            ? errorMessage
+            : `Limite journalière d'achat atteinte. Maximum: ${DAILY_BUY_LIMIT_USDT} USDT par jour.`
+          : errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -101,11 +203,13 @@ export default function BuyCrypto() {
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center py-12">
-          <div className="text-center animate-fade-in">
+          <div className="text-center">
             <div className="h-20 w-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="h-10 w-10 text-success" />
             </div>
-            <h1 className="font-display text-2xl font-bold mb-2">Demande envoyée !</h1>
+            <h1 className="font-display text-2xl font-bold mb-2">
+              Demande envoyée !
+            </h1>
             <p className="text-muted-foreground">
               Votre demande sera traitée par un administrateur.
             </p>
@@ -119,70 +223,173 @@ export default function BuyCrypto() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+
       <main className="flex-1 py-8">
-        <div className="container max-w-2xl">
-          <div className="mb-8 animate-fade-in">
+        <div className="container max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <div className="space-y-4">
             <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center">
-                <ArrowUpRight className="h-5 w-5 text-success" />
+              <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <ArrowUpRight className="h-5 w-5 text-blue-500" />
               </div>
-              <h1 className="font-display text-2xl md:text-3xl font-bold">Acheter Crypto</h1>
+              <h1 className="font-display text-2xl md:text-3xl font-bold">
+                Acheter Crypto
+              </h1>
             </div>
             <p className="text-muted-foreground">
               Achetez des cryptomonnaies avec Mobile Money
             </p>
-          </div>
+            <div className="space-y-6">
+              <div className="p-6 rounded-2xl border bg-card">
+                <h2 className="font-semibold text-lg mb-4">
+                  📊 Votre limite d&apos;achat journalière
+                </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-6 animate-slide-up">
+                <div className="space-y-4 text-sm">
+                  <div className="p-4 rounded-xl bg-success/5 border border-success/20">
+                    <p className="font-medium text-success">
+                      Montant maximum par jour
+                    </p>
+                    <p className="text-2xl font-bold mt-1">
+                      {DAILY_BUY_LIMIT_USDT.toLocaleString()} USDT
+                    </p>
+
+                    {isLoadingLimits ? (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Calcul de vos opérations du jour...
+                      </p>
+                    ) : (
+                      <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                        <p>
+                          Utilisé aujourd&apos;hui:{" "}
+                          <span className="font-medium text-foreground">
+                            {dailyUsedBuy.toFixed(2)} USDT
+                          </span>
+                        </p>
+                        <p>
+                          Restant pour aujourd&apos;hui:{" "}
+                          <span className="font-medium text-foreground">
+                            {Math.max(
+                              0,
+                              DAILY_BUY_LIMIT_USDT - dailyUsedBuy
+                            ).toFixed(2)}{" "}
+                            USDT
+                          </span>
+                        </p>
+                        <p>
+                          Taux d&apos;utilisation:{" "}
+                          <span className="font-medium text-foreground">
+                            {buyUsagePercent.toFixed(0)}%
+                          </span>{" "}
+                          de votre limite d&apos;achat.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-muted-foreground text-xs">
+                    Basé sur vos demandes d&apos;achat du jour (en attente,
+                    payées ou terminées). Les limites sont réinitialisées
+                    toutes les 24h.
+                  </p>
+                </div>
+              </div>
+            </div>
+            </div>
+        </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="p-6 rounded-2xl bg-card border border-border space-y-6">
-              {/* Crypto Selection */}
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label>Cryptomonnaie</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {(["USDT", "BTC", "TRX", "LTC"] as Crypto[]).map((c) => (
+                <div className="relative">
+
+                {canScrollLeft && (
+                  <button
+                    type="button"
+                    onClick={() => scroll("left")}
+                    className="
+                      absolute left-0 top-1/2 -translate-y-1/2 z-10
+                      h-9 w-9 flex items-center justify-center
+                      rounded-full
+                      bg-background/80 backdrop-blur-md
+                      border border-border
+                      shadow-sm
+                      hover:bg-accent hover:text-accent-foreground
+                      transition-all duration-200
+                    "
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                )}
+                <div
+                  ref={scrollRef}
+                  className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide"
+                >
+                  {CRYPTOS.map((c) => (
                     <button
-                      key={c}
+                      key={c.symbol}
                       type="button"
                       onClick={() => {
                         setCrypto(c);
-                        setNetwork(networkOptions[c][0]);
+                        setNetwork(c.networks[0]);
                       }}
-                      className={`p-4 rounded-xl border-2 transition-all ${
-                        crypto === c
+                      className={`min-w-[110px] p-4 rounded-xl border-2 transition-all ${
+                        crypto.symbol === c.symbol
                           ? "border-accent bg-accent/5"
                           : "border-border hover:border-accent/50"
                       }`}
                     >
-                      <CryptoIcon crypto={c} size="sm" className="mx-auto mb-2" />
-                      <p className="font-semibold text-sm">{c}</p>
+                      <CryptoIcon
+                        symbol={c.symbol}
+                        size="sm"
+                        className="mx-auto mb-2"
+                      />
+                      <p className="font-semibold text-sm">{c.symbol}</p>
                     </button>
                   ))}
                 </div>
+                {canScrollRight && (
+                  <button
+                    type="button"
+                    onClick={() => scroll("right")}
+                    className="
+                      absolute right-0 top-1/2 -translate-y-1/2 z-10
+                      h-9 w-9 flex items-center justify-center
+                      rounded-full
+                      bg-background/80 backdrop-blur-md
+                      border border-border
+                      shadow-sm
+                      hover:bg-accent hover:text-accent-foreground
+                      transition-all duration-200
+                    "
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                )}
               </div>
-
-              {/* Network Selection */}
+              </div>
               <div className="space-y-2">
                 <Label>Réseau</Label>
-                <Select value={network} onValueChange={(v: Network) => setNetwork(v)}>
+                <Select value={network} onValueChange={setNetwork}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {networkOptions[crypto].map((n) => (
-                      <SelectItem key={n} value={n}>{n}</SelectItem>
+                    {crypto.networks.map((n) => (
+                      <SelectItem key={n} value={n}>
+                        {n}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Amount in Ariary */}
               <div className="space-y-2">
                 <Label htmlFor="amount">Montant en Ariary</Label>
                 <Input
                   id="amount"
                   type="number"
-                  placeholder="100 000"
+                  placeholder="100000"
                   value={amountAr}
                   onChange={(e) => setAmountAr(e.target.value)}
                   required
@@ -193,48 +400,51 @@ export default function BuyCrypto() {
                 </p>
               </div>
 
-              {/* Calculated Crypto Amount */}
               <div className="p-4 rounded-xl bg-muted">
-                <p className="text-sm text-muted-foreground mb-1">Vous recevrez environ</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Vous recevrez environ
+                </p>
                 <p className="text-2xl font-bold text-accent">
-                  {cryptoAmount} {crypto}
+                  {cryptoAmount} {crypto.symbol}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Taux: 1 {crypto} = {rates[crypto].toLocaleString()} Ar
+                  Taux: 1 {crypto.symbol} = {crypto.buyRate.toLocaleString()} Ar
                 </p>
               </div>
 
-              {/* Wallet Address */}
               <div className="space-y-2">
                 <Label htmlFor="wallet">Adresse Wallet ({network})</Label>
                 <Input
                   id="wallet"
                   type="text"
-                  placeholder="Entrez votre adresse de portefeuille"
+                  placeholder="Entrez votre adresse"
                   value={walletAddress}
                   onChange={(e) => setWalletAddress(e.target.value)}
                   required
                 />
-                <p className="text-sm text-muted-foreground">
-                  Adresse Binance ou autre portefeuille compatible {network}
-                </p>
               </div>
             </div>
 
-            {/* Info Box */}
             <div className="p-4 rounded-xl bg-accent/5 border border-accent/20 flex gap-3">
               <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-accent">Information importante</p>
+                <p className="font-medium text-accent">
+                  Information importante
+                </p>
                 <p className="text-muted-foreground mt-1">
-                  Après validation de votre demande, vous recevrez les instructions 
-                  pour effectuer le paiement Mobile Money. Les cryptos seront envoyées 
-                  après confirmation du paiement.
+                  Après validation, vous recevrez les instructions de paiement.
+                  Les cryptos seront envoyées après confirmation.
                 </p>
               </div>
             </div>
 
-            <Button type="submit" variant="accent" size="lg" className="w-full" disabled={isLoading}>
+            <Button
+              type="submit"
+              variant="accent"
+              size="lg"
+              className="w-full"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
