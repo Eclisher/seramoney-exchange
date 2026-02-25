@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, Search, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api, { getClientTransactions } from "@/lib/api";
-import {
+import {  
   Dialog,
   DialogContent,
   DialogHeader,

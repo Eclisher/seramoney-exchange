@@ -25,13 +25,14 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api, { getMyTransactions } from "@/lib/api";
-import { CRYPTOS, CryptoConfig } from "@/config/cryptos";
+import { useCryptos, CryptoConfig } from "@/config/cryptos";
 
 export default function SellCrypto() {
   const { user } = useAuth();
 
-  const [crypto, setCrypto] = useState<CryptoConfig>(CRYPTOS[0]);
-  const [network, setNetwork] = useState<string>(CRYPTOS[0].networks[0]);
+  const { cryptos, loading } = useCryptos();
+  const [crypto, setCrypto] = useState<CryptoConfig | null>(null);
+  const [network, setNetwork] = useState<string>("");
   const [cryptoAmount, setCryptoAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -68,6 +69,14 @@ export default function SellCrypto() {
 
     return () => el.removeEventListener("scroll", checkScroll);
   }, []);
+
+  // initialize crypto/network once we have the list
+  useEffect(() => {
+    if (!loading && cryptos.length > 0 && !crypto) {
+      setCrypto(cryptos[0]);
+      setNetwork(cryptos[0].networks[0]);
+    }
+  }, [loading, cryptos, crypto]);
 
   useEffect(() => {
     const fetchDailyLimits = async () => {
@@ -110,7 +119,7 @@ export default function SellCrypto() {
   const { toast } = useToast();
 
   const amountAr = cryptoAmount
-    ? (parseFloat(cryptoAmount) * crypto.sellRate).toLocaleString()
+    ? (parseFloat(cryptoAmount) * (crypto?.sellRate ?? 0)).toLocaleString()
     : "0";
 
   const sellUsagePercent =
@@ -194,6 +203,18 @@ export default function SellCrypto() {
     }
   };
 
+  if (loading || !crypto) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -220,13 +241,12 @@ export default function SellCrypto() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 py-8">
-          <div className="container max-w-6xl">
-            <div className="grid md:grid-cols-2 gap-8 mb-8">
-              <div className="space-y-4">
-
+        <div className="container max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <div className="space-y-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <ArrowDownRight className="h-5 w-5 text-blue-500" />
+                  <ArrowDownRight className="h-5 w-5 text-blue-500" />
                 </div>
                 <h1 className="font-display text-2xl md:text-3xl font-bold">
                   Vendre Crypto
@@ -241,56 +261,55 @@ export default function SellCrypto() {
                 </h2>
               </div>
 
-                <div className="space-y-4 text-sm">
-                  <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
-                    <p className="font-medium text-blue-500">
-                      Montant maximum par jour
-                    </p>
-                    <p className="text-2xl font-bold mt-1">
-                      {DAILY_SELL_LIMIT.toLocaleString()} Ar
-                    </p>
-
-                    {isLoadingLimits ? (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Calcul de vos opérations du jour...
-                      </p>
-                    ) : (
-                      <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                        <p>
-                          Utilisé aujourd&apos;hui:{" "}
-                          <span className="font-medium text-foreground">
-                            {dailyUsedSell.toLocaleString()} Ar
-                          </span>
-                        </p>
-                        <p>
-                          Restant pour aujourd&apos;hui:{" "}
-                          <span className="font-medium text-foreground">
-                            {Math.max(
-                              0,
-                              DAILY_SELL_LIMIT - dailyUsedSell
-                            ).toLocaleString()}{" "}
-                            Ar
-                          </span>
-                        </p>
-                        <p>
-                          Taux d&apos;utilisation:{" "}
-                          <span className="font-medium text-foreground">
-                            {sellUsagePercent.toFixed(0)}%
-                          </span>{" "}
-                          de votre limite de vente.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-muted-foreground text-xs">
-                    Basé sur vos demandes de vente du jour (en attente, payées
-                    ou terminées). Les limites sont réinitialisées toutes les
-                    24h.
+              <div className="space-y-4 text-sm">
+                <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                  <p className="font-medium text-blue-500">
+                    Montant maximum par jour
                   </p>
+                  <p className="text-2xl font-bold mt-1">
+                    {DAILY_SELL_LIMIT.toLocaleString()} Ar
+                  </p>
+
+                  {isLoadingLimits ? (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Calcul de vos opérations du jour...
+                    </p>
+                  ) : (
+                    <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                      <p>
+                        Utilisé aujourd&apos;hui:{" "}
+                        <span className="font-medium text-foreground">
+                          {dailyUsedSell.toLocaleString()} Ar
+                        </span>
+                      </p>
+                      <p>
+                        Restant pour aujourd&apos;hui:{" "}
+                        <span className="font-medium text-foreground">
+                          {Math.max(
+                            0,
+                            DAILY_SELL_LIMIT - dailyUsedSell,
+                          ).toLocaleString()}{" "}
+                          Ar
+                        </span>
+                      </p>
+                      <p>
+                        Taux d&apos;utilisation:{" "}
+                        <span className="font-medium text-foreground">
+                          {sellUsagePercent.toFixed(0)}%
+                        </span>{" "}
+                        de votre limite de vente.
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                <p className="text-muted-foreground text-xs">
+                  Basé sur vos demandes de vente du jour (en attente, payées ou
+                  terminées). Les limites sont réinitialisées toutes les 24h.
+                </p>
               </div>
             </div>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="p-6 rounded-2xl bg-card border border-border space-y-6">
               <div className="space-y-2">
@@ -322,28 +341,34 @@ export default function SellCrypto() {
                       ref={scrollRef}
                       className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide"
                     >
-                      {CRYPTOS.map((c) => (
-                        <button
-                          key={c.symbol}
-                          type="button"
-                          onClick={() => {
-                            setCrypto(c);
-                            setNetwork(c.networks[0]);
-                          }}
-                          className={`min-w-[110px] p-4 rounded-xl border-2 transition-all duration-200 ${
-                            crypto.symbol === c.symbol
-                              ? "border-accent bg-accent/5 scale-105"
-                              : "border-border hover:border-accent/50"
-                          }`}
-                        >
-                          <CryptoIcon
-                            symbol={c.symbol}
-                            size="sm"
-                            className="mx-auto mb-2"
-                          />
-                          <p className="font-semibold text-sm">{c.symbol}</p>
-                        </button>
-                      ))}
+                      {loading ? (
+                        <div className="w-full text-center py-6 text-sm text-muted-foreground">
+                          Chargement...
+                        </div>
+                      ) : (
+                        cryptos.map((c) => (
+                          <button
+                            key={c.symbol}
+                            type="button"
+                            onClick={() => {
+                              setCrypto(c);
+                              setNetwork(c.networks[0]);
+                            }}
+                            className={`min-w-[110px] p-4 rounded-xl border-2 transition-all duration-200 ${
+                              crypto?.symbol === c.symbol
+                                ? "border-accent bg-accent/5 scale-105"
+                                : "border-border hover:border-accent/50"
+                            }`}
+                          >
+                            <CryptoIcon
+                              symbol={c.symbol}
+                              size="sm"
+                              className="mx-auto mb-2"
+                            />
+                            <p className="font-semibold text-sm">{c.symbol}</p>
+                          </button>
+                        ))
+                      )}
                     </div>
                     {canScrollRight && (
                       <button

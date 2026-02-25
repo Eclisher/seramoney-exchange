@@ -51,5 +51,24 @@ export const updateTransactionStatus = async (transactionId: string, status: str
   const response = await api.put(`/admin/transactions/${transactionId}/status`, { status, notes });
   return response.data;
 };
+export const getCryptos = async () => {
+  const response = await api.get("/cryptos");
+  return response.data;
+};
+
+export const createCrypto = async (data: any) => {
+  const response = await api.post("/cryptos", data);
+  return response.data;
+};
+
+export const updateCrypto = async (id: string, data: any) => {
+  const response = await api.put(`/cryptos/${id}`, data);
+  return response.data;
+};
+
+export const deleteCrypto = async (id: string) => {
+  const response = await api.delete(`/cryptos/${id}`);
+  return response.data;
+};
 
 export default api;

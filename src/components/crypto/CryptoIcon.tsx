@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { CRYPTOS } from "@/config/cryptos";
+import { useCryptos } from "@/config/cryptos";
 
 interface CryptoIconProps {
   symbol: string;
@@ -18,8 +18,8 @@ export function CryptoIcon({
   size = "md",
   className,
 }: CryptoIconProps) {
-  const crypto = CRYPTOS.find((c) => c.symbol === symbol);
-
+  const { cryptos } = useCryptos();
+  const crypto = cryptos.find((c) => c.symbol === symbol);
   return (
     <div
       className={cn(

@@ -17,6 +17,7 @@ import History from "./pages/History";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminRequests from "./pages/admin/AdminRequests";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminCryptos from "./pages/admin/AdminCryptos";
 import NotFound from "./pages/NotFound";
 import ForgoPasswword from "./pages/ForgotPassword";
 import ResetPasswword from "./pages/ResetPassword";
@@ -81,6 +82,7 @@ function AppRoutes() {
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/requests" element={<ProtectedRoute adminOnly><AdminRequests /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminUsers /></ProtectedRoute>} />
+      <Route path="/admin/cryptos" element={<ProtectedRoute adminOnly><AdminCryptos /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>

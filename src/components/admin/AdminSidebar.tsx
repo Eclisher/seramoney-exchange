@@ -10,12 +10,14 @@ import {
   LogOut,
   Sun,
   Moon,
+  Bitcoin
 } from "lucide-react";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: FileText, label: "Demandes", path: "/admin/requests" },
   { icon: Users, label: "Utilisateurs", path: "/admin/users" },
+  {icon: Bitcoin, label: "Cryptos", path: "/admin/cryptos" },
 ];
 
 interface AdminSidebarProps {

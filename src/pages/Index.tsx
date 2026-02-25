@@ -15,11 +15,11 @@ import {
   Send,
   BadgeCheck,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import { scrollToId } from "@/lib/utils";
 import { useRef, useEffect, useState } from "react";
-import { CRYPTOS } from "@/config/cryptos";
+import { useCryptos } from "@/config/cryptos";
 const features = [
   {
     icon: Shield,
@@ -46,7 +46,6 @@ const features = [
   },
 ];
 
-
 const steps = [
   {
     icon: Users,
@@ -71,34 +70,37 @@ const steps = [
 ];
 
 export default function Index() {
+  // dynamic crypto data
+  const { cryptos, loading } = useCryptos();
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const checkScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-  
+
     setCanScrollLeft(el.scrollLeft > 0);
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth);
   };
-  
+
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
-  
+
     el.scrollBy({
       left: direction === "left" ? -250 : 250,
       behavior: "smooth",
     });
   };
-  
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-  
+
     checkScroll();
     el.addEventListener("scroll", checkScroll);
-  
+
     return () => el.removeEventListener("scroll", checkScroll);
   }, []);
   return (
@@ -280,10 +282,15 @@ export default function Index() {
       scrollbar-hide
     "
             >
-              {CRYPTOS.map((crypto) => (
-                <div
-                  key={crypto.symbol}
-                  className="
+              {loading ? (
+                <div className="w-full text-center py-8 text-sm text-muted-foreground">
+                  Chargement des cryptos...
+                </div>
+              ) : (
+                cryptos.map((crypto) => (
+                  <div
+                    key={crypto.symbol}
+                    className="
           min-w-[140px]
           p-6 rounded-2xl
           border border-border
@@ -291,14 +298,17 @@ export default function Index() {
           flex flex-col items-center justify-center
           transition hover:-translate-y-2 hover:shadow-xl
         "
-                >
-                  <CryptoIcon symbol={crypto.symbol} size="lg" />
+                  >
+                    <CryptoIcon symbol={crypto.symbol} size="lg" />
 
-                  <p className="mt-4 font-semibold">{crypto.symbol}</p>
+                    <p className="mt-4 font-semibold">{crypto.symbol}</p>
 
-                  <p className="text-xs text-muted-foreground">{crypto.name}</p>
-                </div>
-              ))}
+                    <p className="text-xs text-muted-foreground">
+                      {crypto.name}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Indicator */}
