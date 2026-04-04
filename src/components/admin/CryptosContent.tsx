@@ -32,7 +32,16 @@ interface Crypto {
 
 export function CryptosContent() {
   const { toast } = useToast();
-
+  const COLOR_OPTIONS = [
+    { name: "Orange", class: "bg-orange-500" },
+    { name: "Blue", class: "bg-blue-500" },
+    { name: "Green", class: "bg-green-500" },
+    { name: "Red", class: "bg-red-500" },
+    { name: "Purple", class: "bg-purple-500" },
+    { name: "Yellow", class: "bg-yellow-500" },
+    { name: "Pink", class: "bg-pink-500" },
+    { name: "Indigo", class: "bg-indigo-500" },
+  ];  
   const [cryptos, setCryptos] = useState<Crypto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -48,8 +57,6 @@ export function CryptosContent() {
     is_active: true,
     networks: "",
   });
-
-  // Fetch
   const fetchCryptos = async () => {
     try {
       setLoading(true);
@@ -321,17 +328,40 @@ export function CryptosContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Classe de couleur Tailwind</Label>
-              <Input
-                placeholder="Ex: bg-orange-500"
-                value={form.color}
-                onChange={(e) => setForm({ ...form, color: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Exemple : bg-orange-500, bg-green-600...
-              </p>
-            </div>
+              <Label>Couleur</Label>
 
+              <div className="flex flex-wrap gap-3">
+                {COLOR_OPTIONS.map((color) => (
+                  <button
+                    type="button"
+                    key={color.class}
+                    onClick={() => setForm({ ...form, color: color.class })}
+                    className={`
+          h-10 w-10 rounded-full border-2 transition-all
+          ${color.class}
+          ${
+            form.color === color.class
+              ? "border-black scale-110"
+              : "border-transparent"
+          }
+        `}
+                  />
+                ))}
+              </div>
+
+              {form.color && (
+                <div className="flex items-center gap-3 mt-3">
+                  <div
+                    className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${form.color}`}
+                  >
+                    {form.symbol || "?"}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Couleur sélectionnée
+                  </p>
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
               <Label>Réseaux disponibles</Label>
               <Input

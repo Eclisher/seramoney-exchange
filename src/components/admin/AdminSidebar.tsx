@@ -10,7 +10,8 @@ import {
   LogOut,
   Sun,
   Moon,
-  Bitcoin
+  Bitcoin,
+  Wallet,
 } from "lucide-react";
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
   { icon: FileText, label: "Demandes", path: "/admin/requests" },
   { icon: Users, label: "Utilisateurs", path: "/admin/users" },
   {icon: Bitcoin, label: "Cryptos", path: "/admin/cryptos" },
+  {icon: Wallet, label: "Portefeuilles", path: "/admin/wallets" },
 ];
 
 interface AdminSidebarProps {

@@ -71,4 +71,23 @@ export const deleteCrypto = async (id: string) => {
   return response.data;
 };
 
+export const getWallets = async () => {
+  const response = await api.get("/wallets");
+  return response.data;
+};
+
+export const createWallet = async (data: any) => {
+  const response = await api.post("/wallets", data);
+  return response.data;
+};
+
+export const updateWallet = async (id: string, data: any) => {
+  const response = await api.put(`/wallets/${id}`, data);
+  return response.data;
+};
+
+export const deleteWallet = async (id: string) => {
+  const response = await api.delete(`/wallets/${id}`);
+  return response.data;
+};
 export default api;

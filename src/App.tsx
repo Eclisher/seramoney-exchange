@@ -21,6 +21,7 @@ import AdminCryptos from "./pages/admin/AdminCryptos";
 import NotFound from "./pages/NotFound";
 import ForgoPasswword from "./pages/ForgotPassword";
 import ResetPasswword from "./pages/ResetPassword";
+import AdminWallet from "./pages/admin/AdminWallet";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ function AppRoutes() {
       <Route path="/admin/requests" element={<ProtectedRoute adminOnly><AdminRequests /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminUsers /></ProtectedRoute>} />
       <Route path="/admin/cryptos" element={<ProtectedRoute adminOnly><AdminCryptos /></ProtectedRoute>} />
+      <Route path="/admin/wallets" element={<ProtectedRoute adminOnly><AdminWallet /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
