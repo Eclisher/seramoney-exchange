@@ -232,10 +232,10 @@ export function CryptosContent() {
                       </div>
 
                       <div>
-                        <p className="font-semibold">{crypto.symbol}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold">
                           {crypto.name}
                         </p>
+                        <p className=" text-sm text-muted-foreground">{crypto.symbol}</p>
                       </div>
                     </div>
                   </td>

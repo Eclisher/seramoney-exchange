@@ -23,6 +23,8 @@ interface Transaction {
   amount_crypto: string;
   amount_ariary: string;
   wallet_address: string | null;
+  wallet_name?: string | null;
+  wallet_lien?: string | null;
   status: string;
   notes: string | null;
   created_at: string;
@@ -176,7 +178,7 @@ export default function History() {
                             {tx.type}
                           </span>
                           {(tx.crypto === "USDT" || tx.crypto === "BTC" || tx.crypto === "TRX" || tx.crypto === "LTC") && (
-                            <CryptoIcon crypto={tx.crypto as "USDT" | "BTC" | "TRX" | "LTC"} size="sm" />
+                            <CryptoIcon symbol={tx.crypto} size="sm" />
                           )}
                           <span className="font-semibold">{tx.crypto}</span>
                           <span className="text-muted-foreground text-sm">({tx.network})</span>
@@ -201,12 +203,33 @@ export default function History() {
                     </div>
                   </div>
 
-                  {/* Wallet address for purchases */}
-                  {tx.type === "ACHAT" && tx.wallet_address && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <p className="text-sm text-muted-foreground">
-                        Wallet: <span className="font-mono text-foreground">{tx.wallet_address}</span>
-                      </p>
+                  {(tx.wallet_lien || tx.wallet_name || (tx.type === "ACHAT" && tx.wallet_address)) && (
+                    <div className="mt-4 pt-4 border-t border-border flex flex-wrap items-end gap-4">
+                      {(tx.wallet_lien || tx.wallet_name) && (
+                        <div className="flex flex-col items-center gap-1.5">
+                          {tx.wallet_lien ? (
+                            <img
+                              src={tx.wallet_lien}
+                              alt=""
+                              className="h-12 w-12 rounded-lg object-cover border"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : null}
+                          {tx.wallet_name ? (
+                            <span className="text-xs font-semibold text-center max-w-[140px] leading-tight">
+                              {tx.wallet_name}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                      {tx.type === "ACHAT" && tx.wallet_address && (
+                        <p className="text-sm text-muted-foreground flex-1 min-w-[200px]">
+                          Adresse de réception:{" "}
+                          <span className="font-mono text-foreground">{tx.wallet_address}</span>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

@@ -22,8 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import api, { getMyTransactions } from "@/lib/api";
+import api, { getMyTransactions, getWallets } from "@/lib/api";
 import { useCryptos, CryptoConfig } from "@/config/cryptos";
+import {
+  UserWalletPicker,
+  PlatformWallet,
+} from "@/components/wallets/UserWalletPicker";
+
+const TOTAL_STEPS = 4;
 
 export default function BuyCrypto() {
   const { cryptos, loading } = useCryptos();
@@ -35,6 +41,11 @@ export default function BuyCrypto() {
   const [success, setSuccess] = useState(false);
   const [dailyUsedBuy, setDailyUsedBuy] = useState(0);
   const [isLoadingLimits, setIsLoadingLimits] = useState(true);
+  const [step, setStep] = useState(1);
+  const [wallets, setWallets] = useState<PlatformWallet[]>([]);
+  const [walletsLoading, setWalletsLoading] = useState(true);
+  const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -65,9 +76,8 @@ export default function BuyCrypto() {
     el.addEventListener("scroll", checkScroll);
 
     return () => el.removeEventListener("scroll", checkScroll);
-  }, []);
+  }, [step]);
 
-  // set initial crypto once data is available
   useEffect(() => {
     if (!loading && cryptos.length > 0 && !crypto) {
       setCrypto(cryptos[0]);
@@ -118,6 +128,21 @@ export default function BuyCrypto() {
     fetchDailyLimits();
   }, [loading, cryptos]);
 
+  useEffect(() => {
+    const loadWallets = async () => {
+      try {
+        setWalletsLoading(true);
+        const data = await getWallets();
+        setWallets(Array.isArray(data) ? data : []);
+      } catch {
+        setWallets([]);
+      } finally {
+        setWalletsLoading(false);
+      }
+    };
+    loadWallets();
+  }, []);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -131,8 +156,71 @@ export default function BuyCrypto() {
       ? Math.min(100, (dailyUsedBuy / DAILY_BUY_LIMIT_USDT) * 100)
       : 0;
 
+  const selectedWallet = wallets.find((w) => w.id === selectedWalletId) ?? null;
+
+  const goNext = () => {
+    if (step === 1) {
+      if (!crypto || !network) {
+        toast({
+          title: "Étape incomplète",
+          description: "Choisissez une cryptomonnaie et un réseau.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    if (step === 2) {
+      const amountAriaryFloat = parseFloat(amountAr);
+      if (isNaN(amountAriaryFloat) || amountAriaryFloat < 10000) {
+        toast({
+          title: "Montant invalide",
+          description: "Le montant minimum est de 10 000 Ar.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const usdtConfig = cryptos.find((c) => c.symbol === "USDT");
+      if (usdtConfig) {
+        const amountInUSDT = amountAriaryFloat / usdtConfig.buyRate;
+        const totalAfterTransaction = dailyUsedBuy + amountInUSDT;
+        if (totalAfterTransaction > DAILY_BUY_LIMIT_USDT) {
+          const remaining = DAILY_BUY_LIMIT_USDT - dailyUsedBuy;
+          toast({
+            title: "Limite journalière atteinte",
+            description: `Limite restante aujourd'hui : ${remaining > 0 ? remaining.toFixed(2) : 0} USDT (max ${DAILY_BUY_LIMIT_USDT} USDT/jour).`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+    if (step === 3) {
+      if (!selectedWalletId) {
+        toast({
+          title: "Moyen de paiement",
+          description: "Sélectionnez un wallet pour votre paiement.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!walletAddress.trim()) {
+        toast({
+          title: "Adresse requise",
+          description: `Indiquez l'adresse de réception (${network}).`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    setStep((s) => Math.min(TOTAL_STEPS, s + 1));
+  };
+
+  const goPrev = () => setStep((s) => Math.max(1, s - 1));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (step !== TOTAL_STEPS) return;
+
     setIsLoading(true);
 
     try {
@@ -166,13 +254,24 @@ export default function BuyCrypto() {
         }
       }
 
+      if (!selectedWalletId) {
+        toast({
+          title: "Erreur",
+          description: "Sélectionnez un moyen de paiement.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const response = await api.post("/transactions", {
         type: "ACHAT",
-        crypto: crypto.symbol,
+        crypto: crypto!.symbol,
         network,
         amount_ariary: amountAriaryFloat,
         amount_crypto: amountCryptoFloat,
-        wallet_address: walletAddress,
+        wallet_address: walletAddress.trim(),
+        wallet_id: selectedWalletId,
         notes: "",
       });
 
@@ -253,8 +352,7 @@ export default function BuyCrypto() {
 
       <main className="flex-1 py-8">
         <div className="container max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <div className="space-y-4">
+          <div className="mb-8 max-w-2xl space-y-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
                   <ArrowUpRight className="h-5 w-5 text-blue-500" />
@@ -322,18 +420,36 @@ export default function BuyCrypto() {
                   </div>
                 </div>
               </div>
-            </div>
           </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="p-6 rounded-2xl bg-card border border-border space-y-6">
-              <div className="space-y-2 relative">
-                <Label>Cryptomonnaie</Label>
-                <div className="relative">
-                  {canScrollLeft && (
-                    <button
-                      type="button"
-                      onClick={() => scroll("left")}
-                      className="
+            <div className="p-4 rounded-2xl border bg-muted/30">
+              <p className="text-sm font-medium text-foreground mb-2">
+                Étape {step} / {TOTAL_STEPS}
+              </p>
+              <div className="flex gap-1.5 max-w-md">
+                {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 flex-1 rounded-full transition-colors ${
+                      i < step ? "bg-accent" : "bg-border"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-card border border-border space-y-6 min-h-[320px]">
+              {step === 1 && (
+                <>
+                  <div className="space-y-2 relative">
+                    <Label>Cryptomonnaie</Label>
+                    <div className="relative">
+                      {canScrollLeft && (
+                        <button
+                          type="button"
+                          onClick={() => scroll("left")}
+                          className="
                       absolute left-0 top-1/2 -translate-y-1/2 z-10
                       h-9 w-9 flex items-center justify-center
                       rounded-full
@@ -343,48 +459,42 @@ export default function BuyCrypto() {
                       hover:bg-accent hover:text-accent-foreground
                       transition-all duration-200
                     "
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                  )}
-                  <div
-                    ref={scrollRef}
-                    className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide"
-                  >
-                    {loading ? (
-                      <div className="w-full text-center py-6 text-sm text-muted-foreground">
-                        Chargement...
-                      </div>
-                    ) : (
-                      cryptos.map((c) => (
-                        <button
-                          key={c.symbol}
-                          type="button"
-                          onClick={() => {
-                            setCrypto(c);
-                            setNetwork(c.networks[0]);
-                          }}
-                          className={`min-w-[110px] p-4 rounded-xl border-2 transition-all ${
-                            crypto?.symbol === c.symbol
-                              ? "border-accent bg-accent/5"
-                              : "border-border hover:border-accent/50"
-                          }`}
                         >
-                          <CryptoIcon
-                            symbol={c.symbol}
-                            size="sm"
-                            className="mx-auto mb-2"
-                          />
-                          <p className="font-semibold text-sm">{c.symbol}</p>
+                          <ChevronLeft className="h-4 w-4" />
                         </button>
-                      ))
-                    )}
-                  </div>
-                  {canScrollRight && (
-                    <button
-                      type="button"
-                      onClick={() => scroll("right")}
-                      className="
+                      )}
+                      <div
+                        ref={scrollRef}
+                        className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide"
+                      >
+                        {cryptos.map((c) => (
+                          <button
+                            key={c.symbol}
+                            type="button"
+                            onClick={() => {
+                              setCrypto(c);
+                              setNetwork(c.networks[0]);
+                            }}
+                            className={`min-w-[110px] p-4 rounded-xl border-2 transition-all ${
+                              crypto?.symbol === c.symbol
+                                ? "border-accent bg-accent/5"
+                                : "border-border hover:border-accent/50"
+                            }`}
+                          >
+                            <CryptoIcon
+                              symbol={c.symbol}
+                              size="sm"
+                              className="mx-auto mb-2"
+                            />
+                            <p className="font-semibold text-sm">{c.symbol}</p>
+                          </button>
+                        ))}
+                      </div>
+                      {canScrollRight && (
+                        <button
+                          type="button"
+                          onClick={() => scroll("right")}
+                          className="
                       absolute right-0 top-1/2 -translate-y-1/2 z-10
                       h-9 w-9 flex items-center justify-center
                       rounded-full
@@ -394,67 +504,140 @@ export default function BuyCrypto() {
                       hover:bg-accent hover:text-accent-foreground
                       transition-all duration-200
                     "
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  )}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Réseau</Label>
+                    <Select value={network} onValueChange={setNetwork}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {crypto.networks.map((n) => (
+                          <SelectItem key={n} value={n}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
+              {step === 2 && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Montant en Ariary</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="100000"
+                      value={amountAr}
+                      onChange={(e) => setAmountAr(e.target.value)}
+                      min="10000"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Minimum: 10 000 Ar
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-muted">
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Vous recevrez environ
+                    </p>
+                    <p className="text-2xl font-bold text-accent">
+                      {cryptoAmount} {crypto.symbol}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Taux: 1 {crypto.symbol} = {crypto.buyRate.toLocaleString()}{" "}
+                      Ar
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {step === 3 && (
+                <>
+                  <div className="space-y-3">
+                    <Label>Moyen de paiement</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choisissez le wallet sur lequel vous effectuerez le
+                      paiement (logo + nom).
+                    </p>
+                    <UserWalletPicker
+                      wallets={wallets}
+                      loading={walletsLoading}
+                      selectedId={selectedWalletId}
+                      onSelect={setSelectedWalletId}
+                    />
+                  </div>
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <Label htmlFor="wallet">Adresse de réception ({network})</Label>
+                    <Input
+                      id="wallet"
+                      type="text"
+                      placeholder="Entrez votre adresse crypto"
+                      value={walletAddress}
+                      onChange={(e) => setWalletAddress(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {step === 4 && (
+                <div className="space-y-4 text-sm">
+                  <h3 className="font-semibold text-base">Récapitulatif</h3>
+                  <ul className="space-y-2 rounded-xl border border-border p-4 bg-muted/20">
+                    <li className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Crypto</span>
+                      <span className="font-medium">
+                        {crypto.symbol} ({network})
+                      </span>
+                    </li>
+                    <li className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Montant payé</span>
+                      <span className="font-medium">
+                        {parseFloat(amountAr || "0").toLocaleString("fr-FR")} Ar
+                      </span>
+                    </li>
+                    <li className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Vous recevez</span>
+                      <span className="font-medium text-accent">
+                        ~{cryptoAmount} {crypto.symbol}
+                      </span>
+                    </li>
+                    <li className="flex justify-between gap-4 items-start">
+                      <span className="text-muted-foreground shrink-0">
+                        Paiement via
+                      </span>
+                      <span className="font-medium text-right flex flex-col items-end gap-1">
+                        {selectedWallet ? (
+                          <>
+                            <img
+                              src={selectedWallet.lien}
+                              alt=""
+                              className="h-10 w-10 rounded-lg object-cover border"
+                            />
+                            {selectedWallet.name}
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </span>
+                    </li>
+                    <li className="flex justify-between gap-4 items-start">
+                      <span className="text-muted-foreground">Adresse</span>
+                      <span className="font-mono text-xs break-all text-right">
+                        {walletAddress}
+                      </span>
+                    </li>
+                  </ul>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Réseau</Label>
-                <Select value={network} onValueChange={setNetwork}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {crypto.networks.map((n) => (
-                      <SelectItem key={n} value={n}>
-                        {n}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Montant en Ariary</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="100000"
-                  value={amountAr}
-                  onChange={(e) => setAmountAr(e.target.value)}
-                  required
-                  min="10000"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Minimum: 10 000 Ar
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-muted">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Vous recevrez environ
-                </p>
-                <p className="text-2xl font-bold text-accent">
-                  {cryptoAmount} {crypto.symbol}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Taux: 1 {crypto.symbol} = {crypto.buyRate.toLocaleString()} Ar
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="wallet">Adresse Wallet ({network})</Label>
-                <Input
-                  id="wallet"
-                  type="text"
-                  placeholder="Entrez votre adresse"
-                  value={walletAddress}
-                  onChange={(e) => setWalletAddress(e.target.value)}
-                  required
-                />
-              </div>
+              )}
             </div>
 
             <div className="p-4 rounded-xl bg-accent/5 border border-accent/20 flex gap-3">
@@ -470,25 +653,53 @@ export default function BuyCrypto() {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              variant="accent"
-              size="lg"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Envoi en cours...
-                </>
-              ) : (
-                <>
-                  Soumettre la demande
-                  <ArrowUpRight className="h-4 w-4" />
-                </>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {step > 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="sm:w-auto"
+                  onClick={goPrev}
+                  disabled={isLoading}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Précédent
+                </Button>
               )}
-            </Button>
+              {step < TOTAL_STEPS ? (
+                <Button
+                  type="button"
+                  variant="accent"
+                  size="lg"
+                  className="flex-1"
+                  onClick={goNext}
+                >
+                  Suivant
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  variant="accent"
+                  size="lg"
+                  className="flex-1"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    <>
+                      Confirmer la demande
+                      <ArrowUpRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </form>
         </div>
       </main>
