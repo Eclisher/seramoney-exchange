@@ -26,6 +26,8 @@ interface Transaction {
   client_name: string;
   phone_number: string;
   mobile_money_type?: string;
+  wallet_lien?: string;
+  wallet_name?: string;
 }
 
 export function DashboardContent() {
@@ -75,6 +77,8 @@ export function DashboardContent() {
         crypto: t.crypto,
         amount,
         status: t.status,
+        wallet_lien: t.wallet_lien,
+        wallet_name: t.wallet_name,
       };
     });
 
@@ -135,6 +139,12 @@ export function DashboardContent() {
                 <p className="text-sm text-muted-foreground">
                   {req.reference} • {req.type} {req.crypto}
                 </p>
+                {req.wallet_lien && (
+                  <img src={req.wallet_lien} alt={req.wallet_name} className="h-10 w-10 rounded-full object-cover border" />
+                )}
+                {req.wallet_name && (
+                  <p className="text-xs text-muted-foreground">{req.wallet_name}</p>
+                )}
               </div>
               <div className="text-right">
                 <p className="font-medium">{req.amount}</p>

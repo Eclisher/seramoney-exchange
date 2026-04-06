@@ -37,6 +37,8 @@ interface Transaction {
   client_name: string;
   phone_number: string;
   mobile_money_type?: string;
+  wallet_lien?: string;
+  wallet_name?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -196,6 +198,7 @@ export function RequestsContent() {
                   <th className="text-left p-4 font-semibold text-sm">Crypto</th>
                   <th className="text-left p-4 font-semibold text-sm">Montant</th>
                   <th className="text-left p-4 font-semibold text-sm">Référence</th>
+                  <th className="text-left p-4 font-semibold text-sm">Portefeuille</th>
                   <th className="text-left p-4 font-semibold text-sm">Statut</th>
                   <th className="text-left p-4 font-semibold text-sm">Date</th>
                   <th className="text-left p-4 font-semibold text-sm">Actions</th>
@@ -247,6 +250,10 @@ export function RequestsContent() {
                       </td>
                       <td className="p-4">
                         <p className="text-xs font-mono text-muted-foreground">{tx.reference}</p>
+                      </td>
+                      <td className="p-4">
+                        <img src={tx.wallet_lien} alt={tx.wallet_name} className="h-10 w-10 rounded-full object-cover border" />
+                        <p className="text-xs text-muted-foreground">{tx.wallet_name}</p>
                       </td>
                       <td className="p-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[tx.status]}`}>
