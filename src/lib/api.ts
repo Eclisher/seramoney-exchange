@@ -1,11 +1,11 @@
 import axios from "axios";
 
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+  export const api = axios.create({
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 
 api.interceptors.request.use(
   (config) => {
@@ -90,4 +90,27 @@ export const deleteWallet = async (id: string) => {
   const response = await api.delete(`/wallets/${id}`);
   return response.data;
 };
+export async function uploadTransactionImage(params: {
+  transaction_id: string;
+  file: File;
+  title?: string;
+}) {
+  const form = new FormData();
+  form.append("image", params.file);
+  form.append("transaction_id", params.transaction_id);
+  if (params.title) form.append("title", params.title);
+  const res = await api.post("/transaction-images/upload", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data; // { message, data }
+}
+export async function getTransactionImages(transaction_id: string) {
+  const res = await api.get(`/transaction-images/${transaction_id}`);
+  return res.data as Array<{
+    id: string;
+    image_base64: string;
+    title: string;
+    created_at: string;
+  }>;
+}
 export default api;

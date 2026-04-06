@@ -24,14 +24,23 @@ import {
   Wallet,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import api, { getMyTransactions, getWallets } from "@/lib/api";
+import api, { getMyTransactions, getWallets, uploadTransactionImage } from "@/lib/api";
 import { useCryptos, CryptoConfig } from "@/config/cryptos";
 import {
   UserWalletPicker,
   PlatformWallet,
 } from "@/components/wallets/UserWalletPicker";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 6;
+
+type TxLite = {
+  type?: string;
+  created_at: string;
+  status?: string;
+  amount_ariary: string;
+  id?: string;
+  reference?: string;
+};
 
 export default function SellCrypto() {
   const { user } = useAuth();
@@ -41,6 +50,7 @@ export default function SellCrypto() {
   const [network, setNetwork] = useState<string>("");
   const [cryptoAmount, setCryptoAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [creatingTransaction, setCreatingTransaction] = useState(false);
   const [success, setSuccess] = useState(false);
   const [dailyUsedSell, setDailyUsedSell] = useState(0);
   const [isLoadingLimits, setIsLoadingLimits] = useState(true);
@@ -48,6 +58,9 @@ export default function SellCrypto() {
   const [wallets, setWallets] = useState<PlatformWallet[]>([]);
   const [walletsLoading, setWalletsLoading] = useState(true);
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
+  const [createdTransactionId, setCreatedTransactionId] = useState<string | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -97,7 +110,7 @@ export default function SellCrypto() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const todaySellTransactions = transactions.filter((tx: any) => {
+        const todaySellTransactions = (transactions as TxLite[]).filter((tx) => {
           if (tx.type !== "VENTE") return false;
           const txDate = new Date(tx.created_at);
           txDate.setHours(0, 0, 0, 0);
@@ -110,12 +123,12 @@ export default function SellCrypto() {
         });
 
         let totalAriary = 0;
-        todaySellTransactions.forEach((tx: any) => {
+        todaySellTransactions.forEach((tx) => {
           totalAriary += parseFloat(tx.amount_ariary) || 0;
         });
 
         setDailyUsedSell(totalAriary);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Erreur lors de la récupération des limites:", error);
       } finally {
         setIsLoadingLimits(false);
@@ -154,7 +167,79 @@ export default function SellCrypto() {
 
   const selectedWallet = wallets.find((w) => w.id === selectedWalletId) ?? null;
 
-  const goNext = () => {
+  const extractTransactionId = (payload: unknown) => {
+    if (!payload || typeof payload !== "object") return null;
+    const root = payload as Record<string, unknown>;
+
+    const candidates: Array<unknown> = [
+      root.id,
+      root.transaction_id,
+      root.transactionId,
+      root.transactionID,
+      (root.transaction as any)?.id,
+      (root.data as any)?.id,
+      (root.data as any)?.transaction_id,
+      (root.data as any)?.transactionId,
+      (root.data as any)?.transaction?.id,
+      (root.data as any)?.data?.id,
+      (root.result as any)?.id,
+    ];
+
+    for (const c of candidates) {
+      if (typeof c === "string" && c.trim()) return c;
+      if (typeof c === "number" && Number.isFinite(c)) return String(c);
+    }
+    return null;
+  };
+
+  const createTransactionIfNeeded = async () => {
+    if (createdTransactionId) return createdTransactionId;
+    if (!crypto) throw new Error("Crypto manquante");
+    if (!selectedWalletId) throw new Error("Wallet manquant");
+
+    const amountCryptoFloat = parseFloat(cryptoAmount);
+    const amountAriaryFloat = parseFloat(amountAr.replace(/\s/g, ""));
+
+    const response = await api.post("/transactions", {
+      type: "VENTE",
+      crypto: crypto.symbol,
+      network,
+      amount_crypto: amountCryptoFloat,
+      amount_ariary: amountAriaryFloat,
+      wallet_id: selectedWalletId,
+      notes: "",
+    });
+
+    const id = extractTransactionId(response.data);
+    const reference =
+      typeof (response.data as { data?: { reference?: unknown } })?.data?.reference === "string"
+        ? ((response.data as { data: { reference: string } }).data.reference as string)
+        : null;
+
+    if (!id) {
+      if (reference) {
+        const txs = (await getMyTransactions()) as TxLite[];
+        const found = txs.find((t) => t.reference === reference);
+        const fallbackId = found?.id ?? null;
+        if (fallbackId) {
+          setCreatedTransactionId(String(fallbackId));
+          return String(fallbackId);
+        }
+      }
+
+      console.error("Réponse création transaction (VENTE):", response.data);
+      throw new Error(
+        reference
+          ? "Transaction créée, mais ID introuvable (référence non résolue)."
+          : "Transaction créée, mais ID introuvable (voir console).",
+      );
+    }
+
+    setCreatedTransactionId(String(id));
+    return String(id);
+  };
+
+  const goNext = async () => {
     if (step === 1) {
       if (!crypto || !network) {
         toast({
@@ -197,6 +282,34 @@ export default function SellCrypto() {
         return;
       }
     }
+    if (step === 4) {
+      try {
+        setCreatingTransaction(true);
+        await createTransactionIfNeeded();
+        toast({
+          title: "Demande soumise",
+          description: "Suivez les instructions puis envoyez la preuve.",
+        });
+      } catch (error: unknown) {
+        toast({
+          title: "Erreur",
+          description:
+            (typeof error === "object" &&
+            error &&
+            "response" in error &&
+            typeof (error as { response?: { data?: { message?: string } } }).response?.data
+              ?.message === "string"
+              ? (error as { response: { data: { message: string } } }).response.data.message
+              : error instanceof Error
+                ? error.message
+                : "Création impossible"),
+          variant: "destructive",
+        });
+        return;
+      } finally {
+        setCreatingTransaction(false);
+      }
+    }
     setStep((s) => Math.min(TOTAL_STEPS, s + 1));
   };
 
@@ -204,91 +317,8 @@ export default function SellCrypto() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step !== TOTAL_STEPS) return;
-
-    setIsLoading(true);
-
-    try {
-      const amountCryptoFloat = parseFloat(cryptoAmount);
-      const amountAriaryFloat = parseFloat(amountAr.replace(/\s/g, ""));
-
-      if (isNaN(amountCryptoFloat) || amountCryptoFloat < 0.000001) {
-        toast({
-          title: "Erreur",
-          description: "Le montant minimum est de 0.000001",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const totalAfterTransaction = dailyUsedSell + amountAriaryFloat;
-      if (totalAfterTransaction > DAILY_SELL_LIMIT) {
-        const remaining = DAILY_SELL_LIMIT - dailyUsedSell;
-        toast({
-          title: "Limite journalière atteinte",
-          description: `Vous avez déjà utilisé ${dailyUsedSell.toLocaleString()} Ar aujourd'hui. Limite restante: ${remaining > 0 ? remaining.toLocaleString() : 0} Ar. La limite de vente journalière est de ${DAILY_SELL_LIMIT.toLocaleString()} Ar.`,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      if (!selectedWalletId) {
-        toast({
-          title: "Erreur",
-          description: "Sélectionnez un moyen de paiement.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await api.post("/transactions", {
-        type: "VENTE",
-        crypto: crypto!.symbol,
-        network,
-        amount_crypto: amountCryptoFloat,
-        amount_ariary: amountAriaryFloat,
-        wallet_id: selectedWalletId,
-        notes: "",
-      });
-
-      setSuccess(true);
-      toast({
-        title: "Demande envoyée !",
-        description:
-          response.data.message ||
-          "Votre demande de vente a été soumise avec succès.",
-      });
-
-      setTimeout(() => {
-        navigate("/history");
-      }, 2000);
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Erreur lors de l'envoi de la demande";
-
-      const isLimitError =
-        errorMessage.toLowerCase().includes("limite") ||
-        errorMessage.toLowerCase().includes("limit") ||
-        errorMessage.toLowerCase().includes("daily") ||
-        errorMessage.toLowerCase().includes("journalière") ||
-        errorMessage.toLowerCase().includes("journalier") ||
-        error.response?.status === 400;
-
-      toast({
-        title: isLimitError ? "Limite journalière atteinte" : "Erreur",
-        description: isLimitError
-          ? errorMessage.includes("limite") || errorMessage.includes("limit")
-            ? errorMessage
-            : `Limite journalière de vente atteinte. Maximum: ${DAILY_SELL_LIMIT.toLocaleString()} Ar par jour.`
-          : errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Le flux est géré par les boutons "Suivant" et "Envoyer la preuve".
+    return;
   };
 
   if (loading || !crypto) {
@@ -616,6 +646,41 @@ export default function SellCrypto() {
                   </ul>
                 </div>
               )}
+
+              {step === 5 && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base">Instructions</h3>
+                  <div className="rounded-xl border p-4 bg-blue-500/5 border-blue-500/20">
+                    <p className="text-sm text-muted-foreground">
+                      Référence Binance / Numéro
+                    </p>
+                    <p className="font-mono text-lg font-semibold text-blue-600">
+                      0346180946
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Après la transaction portefeuille, cliquez sur Suivant et envoyez la preuve.
+                  </p>
+                </div>
+              )}
+
+              {step === 6 && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base">Preuve (capture d'écran)</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="proof">Fichier</Label>
+                    <Input
+                      id="proof"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Formats images uniquement (PNG/JPG).
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex gap-3">
@@ -638,7 +703,7 @@ export default function SellCrypto() {
                   size="lg"
                   className="sm:w-auto"
                   onClick={goPrev}
-                  disabled={isLoading}
+                  disabled={isLoading || creatingTransaction || uploadingProof}
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Précédent
@@ -651,26 +716,70 @@ export default function SellCrypto() {
                   size="lg"
                   className="flex-1"
                   onClick={goNext}
+                  disabled={isLoading || creatingTransaction}
                 >
-                  Suivant
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="accent"
-                  size="lg"
-                  className="flex-1"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
+                  {step === 4 && creatingTransaction ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Envoi en cours...
+                      Soumission...
                     </>
                   ) : (
                     <>
-                      Confirmer la demande
+                      Suivant
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="accent"
+                  size="lg"
+                  className="flex-1"
+                  disabled={
+                    isLoading ||
+                    creatingTransaction ||
+                    uploadingProof ||
+                    !createdTransactionId ||
+                    !proofFile
+                  }
+                  onClick={async () => {
+                    if (!createdTransactionId || !proofFile) return;
+                    try {
+                      setUploadingProof(true);
+                      await uploadTransactionImage({
+                        transaction_id: createdTransactionId,
+                        file: proofFile,
+                        title: "Preuve",
+                      });
+                      setSuccess(true);
+                      setTimeout(() => navigate("/history"), 1500);
+                    } catch (err: unknown) {
+                      toast({
+                        title: "Erreur",
+                        description:
+                          (typeof err === "object" &&
+                          err &&
+                          "response" in err &&
+                          typeof (err as { response?: { data?: { message?: string } } }).response
+                            ?.data?.message === "string"
+                            ? (err as { response: { data: { message: string } } }).response.data.message
+                            : "Upload impossible"),
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setUploadingProof(false);
+                    }
+                  }}
+                >
+                  {uploadingProof ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Upload...
+                    </>
+                  ) : (
+                    <>
+                      Envoyer la preuve
                       <ArrowDownRight className="h-4 w-4" />
                     </>
                   )}

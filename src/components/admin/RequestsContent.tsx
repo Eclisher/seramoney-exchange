@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { CryptoIcon } from "@/components/crypto/CryptoIcon";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import api, { updateTransactionStatus } from "@/lib/api";
+import api, { getTransactionImages, updateTransactionStatus } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (
+    typeof error === "object" &&
+    error &&
+    "response" in error &&
+    typeof (error as { response?: { data?: { message?: unknown } } }).response?.data?.message ===
+      "string"
+  ) {
+    return (error as { response: { data: { message: string } } }).response.data.message;
+  }
+  if (error instanceof Error && typeof error.message === "string" && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}
 
 interface Transaction {
   id: string;
@@ -71,6 +87,11 @@ export function RequestsContent() {
   const [newStatus, setNewStatus] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [updating, setUpdating] = useState(false);
+  const [proofTransaction, setProofTransaction] = useState<Transaction | null>(null);
+  const [proofLoading, setProofLoading] = useState(false);
+  const [proofImages, setProofImages] = useState<
+    Array<{ id: string; image_base64: string; title: string; created_at: string }>
+  >([]);
   const { toast } = useToast();
 
   // Charger les transactions depuis l'API
@@ -80,10 +101,10 @@ export function RequestsContent() {
         setLoading(true);
         const response = await api.get("/admin/transactions");
         setTransactions(response.data);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "Erreur",
-          description: error.response?.data?.message || "Impossible de charger les transactions",
+          description: getApiErrorMessage(error, "Impossible de charger les transactions"),
           variant: "destructive",
         });
       } finally {
@@ -98,6 +119,24 @@ export function RequestsContent() {
     setSelectedTransaction(transaction);
     setNewStatus(transaction.status);
     setNotes(transaction.notes || "");
+  };
+
+  const openProofs = async (transaction: Transaction) => {
+    setProofTransaction(transaction);
+    setProofImages([]);
+    try {
+      setProofLoading(true);
+      const images = await getTransactionImages(transaction.id);
+      setProofImages(Array.isArray(images) ? images : []);
+    } catch (error: unknown) {
+      toast({
+        title: "Erreur",
+        description: getApiErrorMessage(error, "Impossible de charger les preuves"),
+        variant: "destructive",
+      });
+    } finally {
+      setProofLoading(false);
+    }
   };
 
   const confirmStatusChange = async () => {
@@ -130,18 +169,19 @@ export function RequestsContent() {
       setSelectedTransaction(null);
       setNewStatus("");
       setNotes("");
-    } catch (error: any) {
+    } catch (error: unknown) {
       let errorMessage = "Impossible de mettre à jour le statut";
       
-      if (error.response) {
-        if (error.response.status === 401) {
+      if (typeof error === "object" && error && "response" in error) {
+        const status = (error as { response?: { status?: number } }).response?.status;
+        if (status === 401) {
           errorMessage = "Vous n'êtes pas autorisé. Veuillez vous reconnecter.";
-        } else if (error.response.status === 403) {
+        } else if (status === 403) {
           errorMessage = "Vous n'avez pas les permissions nécessaires pour effectuer cette action.";
         } else {
-          errorMessage = error.response?.data?.message || errorMessage;
+          errorMessage = getApiErrorMessage(error, errorMessage);
         }
-      } else if (error.request) {
+      } else if (typeof error === "object" && error && "request" in error) {
         errorMessage = "Impossible de contacter le serveur. Vérifiez votre connexion.";
       }
       
@@ -199,6 +239,7 @@ export function RequestsContent() {
                   <th className="text-left p-4 font-semibold text-sm">Montant</th>
                   <th className="text-left p-4 font-semibold text-sm">Référence</th>
                   <th className="text-left p-4 font-semibold text-sm">Portefeuille</th>
+                  <th className="text-left p-4 font-semibold text-sm">Preuve</th>
                   <th className="text-left p-4 font-semibold text-sm">Statut</th>
                   <th className="text-left p-4 font-semibold text-sm">Date</th>
                   <th className="text-left p-4 font-semibold text-sm">Actions</th>
@@ -207,7 +248,7 @@ export function RequestsContent() {
               <tbody className="divide-y divide-border">
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={10} className="p-8 text-center text-muted-foreground">
                       Aucune transaction trouvée
                     </td>
                   </tr>
@@ -256,6 +297,15 @@ export function RequestsContent() {
                         <p className="text-xs text-muted-foreground">{tx.wallet_name}</p>
                       </td>
                       <td className="p-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openProofs(tx)}
+                        >
+                          Voir
+                        </Button>
+                      </td>
+                      <td className="p-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[tx.status]}`}>
                           {statusLabels[tx.status]}
                         </span>
@@ -283,6 +333,69 @@ export function RequestsContent() {
           </div>
         )}
       </div>
+
+      {/* Proofs Dialog */}
+      <Dialog
+        open={!!proofTransaction}
+        onOpenChange={() => {
+          setProofTransaction(null);
+          setProofImages([]);
+          setProofLoading(false);
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Preuves</DialogTitle>
+            <DialogDescription>
+              Transaction: {proofTransaction?.reference}
+              <br />
+              Client: {proofTransaction?.client_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {proofLoading ? (
+              <div className="flex items-center justify-center py-10 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="ml-2">Chargement...</span>
+              </div>
+            ) : proofImages.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                Aucune preuve.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {proofImages.map((img) => (
+                  <div key={img.id} className="rounded-xl border border-border p-3 bg-muted/10">
+                    <div className="flex items-baseline justify-between gap-3 mb-2">
+                      <p className="font-medium text-sm">{img.title || "Preuve"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(img.created_at).toLocaleString("fr-FR")}
+                      </p>
+                    </div>
+                    <img
+                      src={`data:image/png;base64,${img.image_base64}`}
+                      alt={img.title || "Preuve"}
+                      className="w-full rounded-lg border object-contain bg-background"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProofTransaction(null);
+                setProofImages([]);
+                setProofLoading(false);
+              }}
+            >
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Status Change Dialog */}
       <Dialog open={!!selectedTransaction} onOpenChange={() => {

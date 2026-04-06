@@ -22,14 +22,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import api, { getMyTransactions, getWallets } from "@/lib/api";
+import api, { getMyTransactions, getWallets, uploadTransactionImage, getTransactionImages } from "@/lib/api";
 import { useCryptos, CryptoConfig } from "@/config/cryptos";
 import {
   UserWalletPicker,
   PlatformWallet,
 } from "@/components/wallets/UserWalletPicker";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 6;
+
+type TxLite = {
+  type?: string;
+  created_at: string;
+  status?: string;
+  amount_ariary: string;
+  id?: string;
+  reference?: string;
+};
 
 export default function BuyCrypto() {
   const { cryptos, loading } = useCryptos();
@@ -38,6 +47,7 @@ export default function BuyCrypto() {
   const [amountAr, setAmountAr] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [creatingTransaction, setCreatingTransaction] = useState(false);
   const [success, setSuccess] = useState(false);
   const [dailyUsedBuy, setDailyUsedBuy] = useState(0);
   const [isLoadingLimits, setIsLoadingLimits] = useState(true);
@@ -45,8 +55,11 @@ export default function BuyCrypto() {
   const [wallets, setWallets] = useState<PlatformWallet[]>([]);
   const [walletsLoading, setWalletsLoading] = useState(true);
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
-
+  const [createdTransactionId, setCreatedTransactionId] = useState<string | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const DAILY_BUY_LIMIT_USDT = 200;
@@ -96,7 +109,7 @@ export default function BuyCrypto() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const todayBuyTransactions = transactions.filter((tx: any) => {
+        const todayBuyTransactions = (transactions as TxLite[]).filter((tx) => {
           if (tx.type !== "ACHAT") return false;
           const txDate = new Date(tx.created_at);
           txDate.setHours(0, 0, 0, 0);
@@ -110,7 +123,7 @@ export default function BuyCrypto() {
         const usdtConfig = cryptos.find((c) => c.symbol === "USDT");
         let totalUSDT = 0;
         if (usdtConfig) {
-          todayBuyTransactions.forEach((tx: any) => {
+          todayBuyTransactions.forEach((tx) => {
             const amountInUSDT =
               parseFloat(tx.amount_ariary) / usdtConfig.buyRate;
             totalUSDT += amountInUSDT;
@@ -118,7 +131,7 @@ export default function BuyCrypto() {
         }
 
         setDailyUsedBuy(totalUSDT);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Erreur lors de la récupération des limites:", error);
       } finally {
         setIsLoadingLimits(false);
@@ -157,8 +170,93 @@ export default function BuyCrypto() {
       : 0;
 
   const selectedWallet = wallets.find((w) => w.id === selectedWalletId) ?? null;
+  const walletName = (selectedWallet?.name ?? "").toLowerCase();
+  const isMvola = walletName.includes("mvola") || walletName.includes("mvola");
+  const isOrange = walletName.includes("orange");
 
-  const goNext = () => {
+  const extractTransactionId = (payload: unknown) => {
+    if (!payload || typeof payload !== "object") return null;
+    const root = payload as Record<string, unknown>;
+
+    const candidates: Array<unknown> = [
+      root.id,
+      root.transaction_id,
+      root.transactionId,
+      root.transactionID,
+      (root.transaction as Record<string, unknown> | undefined)?.id,
+      (root.data as Record<string, unknown> | undefined)?.id,
+      (root.data as Record<string, unknown> | undefined)?.transaction_id,
+      (root.data as Record<string, unknown> | undefined)?.transactionId,
+      (
+        (root.data as Record<string, unknown> | undefined)?.transaction as
+          | Record<string, unknown>
+          | undefined
+      )?.id,
+      (
+        (root.data as Record<string, unknown> | undefined)?.data as
+          | Record<string, unknown>
+          | undefined
+      )?.id,
+      (root.result as Record<string, unknown> | undefined)?.id,
+    ];
+
+    for (const c of candidates) {
+      if (typeof c === "string" && c.trim()) return c;
+      if (typeof c === "number" && Number.isFinite(c)) return String(c);
+    }
+    return null;
+  };
+
+  const createTransactionIfNeeded = async () => {
+    if (createdTransactionId) return createdTransactionId;
+    if (!crypto) throw new Error("Crypto manquante");
+    if (!selectedWalletId) throw new Error("Wallet manquant");
+
+    const amountAriaryFloat = parseFloat(amountAr);
+    const amountCryptoFloat = parseFloat(cryptoAmount);
+
+    const response = await api.post("/transactions", {
+      type: "ACHAT",
+      crypto: crypto.symbol,
+      network,
+      amount_ariary: amountAriaryFloat,
+      amount_crypto: amountCryptoFloat,
+      wallet_address: walletAddress.trim(),
+      wallet_id: selectedWalletId,
+      notes: "",
+    });
+
+    const id = extractTransactionId(response.data);
+    const reference =
+      typeof (response.data as { data?: { reference?: unknown } })?.data?.reference === "string"
+        ? ((response.data as { data: { reference: string } }).data.reference as string)
+        : null;
+
+    if (!id) {
+      // Fallback: le backend renvoie parfois uniquement `reference`
+      if (reference) {
+        const txs = (await getMyTransactions()) as TxLite[];
+        const found = txs.find((t) => t.reference === reference);
+        const fallbackId = found?.id ?? null;
+        if (fallbackId) {
+          setCreatedTransactionId(String(fallbackId));
+          return String(fallbackId);
+        }
+      }
+
+      console.error("Réponse création transaction (ACHAT):", response.data);
+      throw new Error(
+        reference
+          ? "Transaction créée, mais ID introuvable (référence non résolue)."
+          : "Transaction créée, mais ID introuvable (voir console).",
+      );
+    }
+
+    setCreatedTransactionId(String(id));
+    return String(id);
+  };
+
+  const goNext = async () => {
     if (step === 1) {
       if (!crypto || !network) {
         toast({
@@ -212,6 +310,34 @@ export default function BuyCrypto() {
         return;
       }
     }
+    if (step === 4) {
+      try {
+        setCreatingTransaction(true);
+        await createTransactionIfNeeded();
+        toast({
+          title: "Demande soumise",
+          description: "Suivez les instructions puis envoyez la preuve.",
+        });
+    } catch (error: unknown) {
+        toast({
+          title: "Erreur",
+        description:
+          (typeof error === "object" &&
+          error &&
+          "response" in error &&
+          typeof (error as { response?: { data?: { message?: string } } }).response?.data
+            ?.message === "string"
+            ? (error as { response: { data: { message: string } } }).response.data.message
+            : error instanceof Error
+              ? error.message
+              : "Création impossible"),
+          variant: "destructive",
+        });
+        return;
+      } finally {
+        setCreatingTransaction(false);
+      }
+    }
     setStep((s) => Math.min(TOTAL_STEPS, s + 1));
   };
 
@@ -219,97 +345,8 @@ export default function BuyCrypto() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step !== TOTAL_STEPS) return;
-
-    setIsLoading(true);
-
-    try {
-      const amountAriaryFloat = parseFloat(amountAr);
-      const amountCryptoFloat = parseFloat(cryptoAmount);
-
-      if (isNaN(amountAriaryFloat) || amountAriaryFloat < 10000) {
-        toast({
-          title: "Erreur",
-          description: "Le montant minimum est de 10 000 Ar",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const usdtConfig = cryptos.find((c) => c.symbol === "USDT");
-      if (usdtConfig) {
-        const amountInUSDT = amountAriaryFloat / usdtConfig.buyRate;
-        const totalAfterTransaction = dailyUsedBuy + amountInUSDT;
-
-        if (totalAfterTransaction > DAILY_BUY_LIMIT_USDT) {
-          const remaining = DAILY_BUY_LIMIT_USDT - dailyUsedBuy;
-          toast({
-            title: "Limite journalière atteinte",
-            description: `Vous avez déjà utilisé ${dailyUsedBuy.toFixed(2)} USDT aujourd'hui. Limite restante: ${remaining > 0 ? remaining.toFixed(2) : 0} USDT. La limite d'achat journalière est de ${DAILY_BUY_LIMIT_USDT} USDT.`,
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      if (!selectedWalletId) {
-        toast({
-          title: "Erreur",
-          description: "Sélectionnez un moyen de paiement.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await api.post("/transactions", {
-        type: "ACHAT",
-        crypto: crypto!.symbol,
-        network,
-        amount_ariary: amountAriaryFloat,
-        amount_crypto: amountCryptoFloat,
-        wallet_address: walletAddress.trim(),
-        wallet_id: selectedWalletId,
-        notes: "",
-      });
-
-      setSuccess(true);
-      toast({
-        title: "Demande envoyée !",
-        description:
-          response.data.message ||
-          "Votre demande d'achat a été soumise avec succès.",
-      });
-
-      setTimeout(() => {
-        navigate("/history");
-      }, 2000);
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Erreur lors de l'envoi de la demande";
-
-      const isLimitError =
-        errorMessage.toLowerCase().includes("limite") ||
-        errorMessage.toLowerCase().includes("limit") ||
-        errorMessage.toLowerCase().includes("daily") ||
-        errorMessage.toLowerCase().includes("journalière") ||
-        errorMessage.toLowerCase().includes("journalier") ||
-        error.response?.status === 400;
-
-      toast({
-        title: isLimitError ? "Limite journalière atteinte" : "Erreur",
-        description: isLimitError
-          ? errorMessage.includes("limite") || errorMessage.includes("limit")
-            ? errorMessage
-            : `Limite journalière d'achat atteinte. Maximum: ${DAILY_BUY_LIMIT_USDT} USDT par jour.`
-          : errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Le flux est géré par les boutons "Suivant" et "Envoyer la preuve".
+    return;
   };
 
   if (loading || !crypto) {
@@ -638,6 +675,51 @@ export default function BuyCrypto() {
                   </ul>
                 </div>
               )}
+            {step === 5 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-base">Instructions de paiement</h3>
+                {isMvola && (
+                  <div className="rounded-xl border p-4 bg-success/5 border-success/20">
+                    <p className="text-sm text-muted-foreground">MVola</p>
+                    <p className="font-mono text-lg font-semibold text-success">#111*xxxxx</p>
+                  </div>
+                )}
+                {isOrange && (
+                  <div className="rounded-xl border p-4 bg-orange-500/5 border-orange-500/20">
+                    <p className="text-sm text-muted-foreground">OrangeMoney</p>
+                    <p className="font-mono text-lg font-semibold text-orange-600">#144*xxxxx</p>
+                  </div>
+                )}
+                {!isMvola && !isOrange && (
+                  <div className="rounded-xl border p-4 bg-muted/30">
+                    <p className="text-sm text-muted-foreground">
+                      Moyen de paiement: <span className="font-medium text-foreground">{selectedWallet?.name ?? "—"}</span>
+                    </p>
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Après le paiement, cliquez sur Suivant et envoyez la preuve.
+                </p>
+              </div>
+            )}
+            {step === 6 && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-base">Preuve (capture d'écran)</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="proof">Fichier</Label>
+                      <Input
+                        id="proof"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Formats images uniquement (PNG/JPG).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
             </div>
 
             <div className="p-4 rounded-xl bg-accent/5 border border-accent/20 flex gap-3">
@@ -661,7 +743,7 @@ export default function BuyCrypto() {
                   size="lg"
                   className="sm:w-auto"
                   onClick={goPrev}
-                  disabled={isLoading}
+                  disabled={isLoading || creatingTransaction || uploadingProof}
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Précédent
@@ -674,26 +756,70 @@ export default function BuyCrypto() {
                   size="lg"
                   className="flex-1"
                   onClick={goNext}
+                  disabled={isLoading || creatingTransaction}
                 >
-                  Suivant
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="accent"
-                  size="lg"
-                  className="flex-1"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
+                  {step === 4 && creatingTransaction ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Envoi en cours...
+                      Soumission...
                     </>
                   ) : (
                     <>
-                      Confirmer la demande
+                      Suivant
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="accent"
+                  size="lg"
+                  className="flex-1"
+                  disabled={
+                    isLoading ||
+                    creatingTransaction ||
+                    uploadingProof ||
+                    !createdTransactionId ||
+                    !proofFile
+                  }
+                  onClick={async () => {
+                    if (!createdTransactionId || !proofFile) return;
+                    try {
+                      setUploadingProof(true);
+                      await uploadTransactionImage({
+                        transaction_id: createdTransactionId,
+                        file: proofFile,
+                        title: "Preuve",
+                      });
+                      setSuccess(true);
+                      setTimeout(() => navigate("/history"), 1500);
+                        } catch (err: unknown) {
+                      toast({
+                        title: "Erreur",
+                            description:
+                              (typeof err === "object" &&
+                              err &&
+                              "response" in err &&
+                              typeof (err as { response?: { data?: { message?: string } } }).response
+                                ?.data?.message === "string"
+                                ? (err as { response: { data: { message: string } } }).response.data.message
+                                : "Upload impossible"),
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setUploadingProof(false);
+                    }
+                  }}
+                >
+                  {uploadingProof ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Upload...
+                    </>
+                  ) : (
+                    <>
+                      Envoyer la preuve
                       <ArrowUpRight className="h-4 w-4" />
                     </>
                   )}
