@@ -5,7 +5,7 @@ export interface PlatformWallet {
   id: string;
   lien: string;
   name: string;
-  description: string;
+  address: string;
 }
 
 interface UserWalletPickerProps {

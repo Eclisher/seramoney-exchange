@@ -223,6 +223,7 @@ export default function BuyCrypto() {
       amount_crypto: amountCryptoFloat,
       wallet_address: walletAddress.trim(),
       wallet_id: selectedWalletId,
+      walletAddress:null,
       notes: "",
     });
 

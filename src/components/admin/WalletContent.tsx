@@ -21,7 +21,7 @@ interface Wallet {
   id: string;
   lien: string;
   name: string;
-  description: string;
+  address: string; // ← renommé
   created_at: string;
   updated_at: string | null;
 }
@@ -38,7 +38,7 @@ export function WalletContent() {
   const [form, setForm] = useState({
     lien: "",
     name: "",
-    description: "",
+    address: "", // ← renommé
   });
 
   const fetchWallets = async () => {
@@ -65,18 +65,11 @@ export function WalletContent() {
     try {
       if (editing) {
         await updateWallet(editing.id, form);
-        toast({
-          title: "Succès",
-          description: "Wallet mis à jour",
-        });
+        toast({ title: "Succès", description: "Wallet mis à jour" });
       } else {
         await createWallet(form);
-        toast({
-          title: "Créé",
-          description: "Wallet ajouté",
-        });
+        toast({ title: "Créé", description: "Wallet ajouté" });
       }
-
       setOpen(false);
       setEditing(null);
       resetForm();
@@ -92,7 +85,6 @@ export function WalletContent() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Supprimer ce wallet ?")) return;
-
     try {
       await deleteWallet(id);
       toast({
@@ -111,16 +103,12 @@ export function WalletContent() {
   };
 
   const resetForm = () => {
-    setForm({ lien: "", name: "", description: "" });
+    setForm({ lien: "", name: "", address: "" });
   };
 
   const openEdit = (wallet: Wallet) => {
     setEditing(wallet);
-    setForm({
-      lien: wallet.lien,
-      name: wallet.name,
-      description: wallet.description,
-    });
+    setForm({ lien: wallet.lien, name: wallet.name, address: wallet.address });
     setOpen(true);
   };
 
@@ -135,11 +123,8 @@ export function WalletContent() {
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Gestion des Wallets</h2>
-          <p className="text-muted-foreground">
-            Gérez les portefeuilles
-          </p>
+          <p className="text-muted-foreground">Gérez les portefeuilles</p>
         </div>
-
         <Button
           onClick={() => {
             resetForm();
@@ -175,7 +160,8 @@ export function WalletContent() {
               <tr className="border-b">
                 <th className="p-4 text-left">Nom</th>
                 <th className="p-4 text-left">Lien</th>
-                <th className="p-4 text-left">Description</th>
+                <th className="p-4 text-left">Adresses</th>
+                {/* ← renommé */}
                 <th className="p-4">Actions</th>
               </tr>
             </thead>
@@ -184,23 +170,40 @@ export function WalletContent() {
                 <tr key={wallet.id} className="border-b hover:bg-muted/30">
                   <td className="p-4 font-medium">{wallet.name}</td>
                   <td className="p-4">
-  <div className="flex items-center gap-3">
-    <img
-      src={wallet.lien}
-      alt={wallet.name}
-      className="h-12 w-12 rounded-lg object-cover border"
-      onError={(e) => (e.currentTarget.style.display = 'none')}
-    />
-  </div>
-</td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {wallet.description}
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={wallet.lien}
+                        alt={wallet.name}
+                        className="h-12 w-12 rounded-lg object-cover border"
+                        onError={(e) =>
+                          (e.currentTarget.style.display = "none")
+                        }
+                      />
+                    </div>
+                  </td>
+                  <td className="p-4 text-sm text-muted-foreground max-w-xs">
+                    {/* Affiche chaque adresse sur une ligne */}
+                    {wallet.address
+                      ? wallet.address.split(",").map((addr, i) => (
+                          <div key={i} className="font-mono text-xs truncate">
+                            {addr.trim()}
+                          </div>
+                        ))
+                      : "—"}
                   </td>
                   <td className="p-4 flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(wallet)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openEdit(wallet)}
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(wallet.id)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(wallet.id)}
+                    >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </td>
@@ -218,7 +221,6 @@ export function WalletContent() {
               {editing ? "Modifier Wallet" : "Ajouter Wallet"}
             </DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4">
             <div>
               <Label>Nom</Label>
@@ -227,23 +229,24 @@ export function WalletContent() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
-
             <div>
-              <Label>Lien</Label>
+              <Label>Lien (image)</Label>
               <Input
                 value={form.lien}
                 onChange={(e) => setForm({ ...form, lien: e.target.value })}
               />
             </div>
-
             <div>
-              <Label>Description</Label>
+              <Label>Adresses (séparées par des virgules)</Label>
               <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                placeholder="0xABC..., 0xDEF..."
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Entrez une ou plusieurs adresses séparées par <code>,</code>
+              </p>
             </div>
-
             <Button className="w-full" onClick={handleSubmit}>
               {editing ? "Mettre à jour" : "Créer"}
             </Button>
