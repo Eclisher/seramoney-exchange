@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CryptoIcon } from "@/components/crypto/CryptoIcon";
+
 import {
   ArrowUpRight,
   Info,
@@ -28,6 +29,7 @@ import {
   UserWalletPicker,
   PlatformWallet,
 } from "@/components/wallets/UserWalletPicker";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TOTAL_STEPS = 6;
 
@@ -41,6 +43,8 @@ type TxLite = {
 };
 
 export default function BuyCrypto() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { cryptos, loading } = useCryptos();
   const [crypto, setCrypto] = useState<CryptoConfig | null>(null);
   const [network, setNetwork] = useState<string>("");
@@ -155,8 +159,6 @@ export default function BuyCrypto() {
     };
     loadWallets();
   }, []);
-
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const cryptoAmount =
@@ -170,9 +172,26 @@ export default function BuyCrypto() {
       : 0;
 
   const selectedWallet = wallets.find((w) => w.id === selectedWalletId) ?? null;
-  const walletName = (selectedWallet?.name ?? "").toLowerCase();
-  const isMvola = walletName.includes("mvola") || walletName.includes("mvola");
-  const isOrange = walletName.includes("orange");
+  const detectOperator = (
+    phone: string | undefined,
+  ): "mvola" | "orange" | "unknown" => {
+    if (!phone) return "unknown";
+    const digits = phone.replace(/\D/g, ""); // retire +, espaces, tirets
+
+    // Normaliser : si commence par 261, retirer le préfixe pays
+    const local = digits.startsWith("261") ? digits.slice(3) : digits;
+
+    // MVola : 034xxxxxxx ou 038xxxxxxx (7 chiffres après le préfixe)
+    if (/^(034|038)\d{7}$/.test(local)) return "mvola";
+
+    // Orange : 032xxxxxxx ou 037xxxxxxx
+    if (/^(032|037)\d{7}$/.test(local)) return "orange";
+
+    return "unknown";
+  };
+  const operator = detectOperator(user?.phone_number);
+  const isMvola = operator === "mvola";
+  const isOrange = operator === "orange";
 
   const extractTransactionId = (payload: unknown) => {
     if (!payload || typeof payload !== "object") return null;
@@ -234,7 +253,6 @@ export default function BuyCrypto() {
         : null;
 
     if (!id) {
-      // Fallback: le backend renvoie parfois uniquement `reference`
       if (reference) {
         const txs = (await getMyTransactions()) as TxLite[];
         const found = txs.find((t) => t.reference === reference);
