@@ -21,7 +21,7 @@ interface Wallet {
   id: string;
   lien: string;
   name: string;
-  address: string; // ← renommé
+  address: string;
   created_at: string;
   updated_at: string | null;
 }
@@ -38,7 +38,7 @@ export function WalletContent() {
   const [form, setForm] = useState({
     lien: "",
     name: "",
-    address: "", // ← renommé
+    address: "", 
   });
 
   const fetchWallets = async () => {

@@ -26,12 +26,17 @@ function getApiErrorMessage(error: unknown, fallback: string) {
     typeof error === "object" &&
     error &&
     "response" in error &&
-    typeof (error as { response?: { data?: { message?: unknown } } }).response?.data?.message ===
-      "string"
+    typeof (error as { response?: { data?: { message?: unknown } } }).response
+      ?.data?.message === "string"
   ) {
-    return (error as { response: { data: { message: string } } }).response.data.message;
+    return (error as { response: { data: { message: string } } }).response.data
+      .message;
   }
-  if (error instanceof Error && typeof error.message === "string" && error.message.trim()) {
+  if (
+    error instanceof Error &&
+    typeof error.message === "string" &&
+    error.message.trim()
+  ) {
     return error.message;
   }
   return fallback;
@@ -82,31 +87,48 @@ const allowedStatuses: Array<{ value: string; label: string }> = [
   { value: "TERMINE", label: "Terminé" },
 ];
 
-const getReceptionAddressForDisplay = (transaction: Transaction) => {
-  if (transaction.type === "ACHAT") return "";
-  return transaction.type === "VENTE"
-  ? transaction.wallet_address?.trim() || ""
-  : "";
-};
+function getReceptionAddressForDisplay(
+  transaction: Transaction,
+): string | null {
+  if (transaction.wallet_address && transaction.wallet_address.trim() !== "") {
+    return transaction.wallet_address;
+  }
+  if (
+    transaction.wallet_address_list &&
+    transaction.wallet_address_list.trim() !== ""
+  ) {
+    return transaction.wallet_address_list;
+  }
+  return null;
+}
 
 const formatWalletAddressForTable = (transaction: Transaction) => {
   const address = getReceptionAddressForDisplay(transaction);
   if (!address) return "-";
-  if (address.length <= 22) return address;
-  return `${address.slice(0, 10)}...${address.slice(-8)}`;
+  return address.length > 22
+    ? `${address.slice(0, 10)}...${address.slice(-8)}`
+    : address;
 };
 
 export function RequestsContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [updating, setUpdating] = useState(false);
-  const [proofTransaction, setProofTransaction] = useState<Transaction | null>(null);
+  const [proofTransaction, setProofTransaction] = useState<Transaction | null>(
+    null,
+  );
   const [proofLoading, setProofLoading] = useState(false);
   const [proofImages, setProofImages] = useState<
-    Array<{ id: string; image_base64: string; title: string; created_at: string }>
+    Array<{
+      id: string;
+      image_base64: string;
+      title: string;
+      created_at: string;
+    }>
   >([]);
   const { toast } = useToast();
 
@@ -119,7 +141,10 @@ export function RequestsContent() {
       } catch (error: unknown) {
         toast({
           title: "Erreur",
-          description: getApiErrorMessage(error, "Impossible de charger les transactions"),
+          description: getApiErrorMessage(
+            error,
+            "Impossible de charger les transactions",
+          ),
           variant: "destructive",
         });
       } finally {
@@ -146,7 +171,10 @@ export function RequestsContent() {
     } catch (error: unknown) {
       toast({
         title: "Erreur",
-        description: getApiErrorMessage(error, "Impossible de charger les preuves"),
+        description: getApiErrorMessage(
+          error,
+          "Impossible de charger les preuves",
+        ),
         variant: "destructive",
       });
     } finally {
@@ -160,7 +188,8 @@ export function RequestsContent() {
     if (!token) {
       toast({
         title: "Erreur d'authentification",
-        description: "Vous devez être connecté pour modifier le statut d'une transaction",
+        description:
+          "Vous devez être connecté pour modifier le statut d'une transaction",
         variant: "destructive",
       });
       return;
@@ -168,7 +197,11 @@ export function RequestsContent() {
 
     try {
       setUpdating(true);
-      await updateTransactionStatus(selectedTransaction.id, newStatus, notes || undefined);
+      await updateTransactionStatus(
+        selectedTransaction.id,
+        newStatus,
+        notes || undefined,
+      );
 
       setTransactions(
         transactions.map((t) =>
@@ -195,7 +228,8 @@ export function RequestsContent() {
       let errorMessage = "Impossible de mettre à jour le statut";
 
       if (typeof error === "object" && error && "response" in error) {
-        const status = (error as { response?: { status?: number } }).response?.status;
+        const status = (error as { response?: { status?: number } }).response
+          ?.status;
         if (status === 401) {
           errorMessage = "Vous n'êtes pas autorisé. Veuillez vous reconnecter.";
         } else if (status === 403) {
@@ -205,7 +239,8 @@ export function RequestsContent() {
           errorMessage = getApiErrorMessage(error, errorMessage);
         }
       } else if (typeof error === "object" && error && "request" in error) {
-        errorMessage = "Impossible de contacter le serveur. Vérifiez votre connexion.";
+        errorMessage =
+          "Impossible de contacter le serveur. Vérifiez votre connexion.";
       }
 
       toast({
@@ -363,9 +398,7 @@ export function RequestsContent() {
                       <p
                         className="text-xs text-muted-foreground font-mono leading-snug break-words"
                         title={
-                          tx.type === "VENTE"
-                            ? getReceptionAddressForDisplay(tx) || undefined
-                            : undefined
+                          getReceptionAddressForDisplay(tx) || "Aucune adresse"
                         }
                       >
                         {formatWalletAddressForTable(tx)}
