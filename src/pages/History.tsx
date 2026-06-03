@@ -9,7 +9,6 @@ import {
   Loader2,
   Timer,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -39,8 +38,7 @@ interface Transaction {
   reference: string;
 }
 
-const TIMER_DURATION = 15 * 60; // 15 minutes en secondes
-
+const TIMER_DURATION = 15 * 60;
 const statusColors: Record<string, string> = {
   EN_ATTENTE: "bg-warning/10 text-warning border-warning/20",
   PAYE: "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -57,8 +55,7 @@ const statusLabels: Record<string, string> = {
   REFUSE: "Refusé",
 };
 
-// ─── Hook minuteur par transaction ───────────────────────────────────────────
-function useTransactionTimer(createdAt: string) {
+function useTransactionTimer(createdAt: string, status: string) {
   const [secondsLeft, setSecondsLeft] = useState<number>(() => {
     const elapsed = Math.floor(
       (Date.now() - new Date(createdAt).getTime()) / 1000,
@@ -66,8 +63,10 @@ function useTransactionTimer(createdAt: string) {
     return Math.max(0, TIMER_DURATION - elapsed);
   });
 
+  const isTimerStopped = status !== "EN_ATTENTE";
+
   useEffect(() => {
-    if (secondsLeft <= 0) return;
+    if (isTimerStopped) return;
     const interval = setInterval(() => {
       setSecondsLeft((s) => {
         if (s <= 1) {
@@ -78,7 +77,7 @@ function useTransactionTimer(createdAt: string) {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, []); // ne se relance pas — chaque transaction a sa propre instance
+  }, [isTimerStopped]);
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
@@ -86,12 +85,20 @@ function useTransactionTimer(createdAt: string) {
   const percent = (secondsLeft / TIMER_DURATION) * 100;
   const expired = secondsLeft <= 0;
 
-  return { secondsLeft, formatted, percent, expired };
+  return { formatted, percent, expired, stopped: isTimerStopped };
 }
 
-// ─── Composant minuteur affiché dans chaque carte ────────────────────────────
-function TransactionTimer({ createdAt }: { createdAt: string }) {
-  const { formatted, percent, expired } = useTransactionTimer(createdAt);
+function TransactionTimer({
+  createdAt,
+  status,
+}: {
+  createdAt: string;
+  status: string;
+}) {
+  const { formatted, percent, expired, stopped } = useTransactionTimer(
+    createdAt,
+    status,
+  );
 
   const barColor =
     percent > 50
@@ -112,7 +119,11 @@ function TransactionTimer({ createdAt }: { createdAt: string }) {
       <Timer className="h-4 w-4 text-muted-foreground shrink-0" />
       <span className="text-xs text-muted-foreground">Temps restant :</span>
 
-      {expired ? (
+      {stopped ? (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold border bg-muted text-muted-foreground border-border">
+          Arrêté
+        </span>
+      ) : expired ? (
         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold border bg-success/10 text-success border-success/20">
           Expiré
         </span>
@@ -124,11 +135,12 @@ function TransactionTimer({ createdAt }: { createdAt: string }) {
         </span>
       )}
 
-      {/* Barre de progression */}
       <div className="flex-1 min-w-[80px] h-1.5 bg-muted rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-1000 ${expired ? "bg-success w-0" : barColor}`}
-          style={{ width: `${percent}%` }}
+          className={`h-full rounded-full transition-all duration-1000 ${
+            stopped || expired ? "bg-muted-foreground/40" : barColor
+          }`}
+          style={{ width: stopped || expired ? "0%" : `${percent}%` }}
         />
       </div>
     </div>
@@ -201,7 +213,6 @@ export default function History() {
             </p>
           </div>
 
-          {/* Filtres */}
           <div className="flex flex-wrap gap-4 mb-6">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
@@ -235,7 +246,6 @@ export default function History() {
             </Select>
           </div>
 
-          {/* Liste des transactions */}
           <div className="space-y-4 animate-slide-up">
             {isLoading ? (
               <div className="text-center py-12 rounded-2xl bg-card border border-border">
@@ -321,8 +331,6 @@ export default function History() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Wallet info */}
                   {(tx.wallet_lien ||
                     tx.wallet_name ||
                     (tx.type === "ACHAT" && tx.wallet_address)) && (
@@ -357,8 +365,10 @@ export default function History() {
                     </div>
                   )}
 
-                  {/* ✅ Minuteur 15 min — propre à chaque transaction */}
-                  <TransactionTimer createdAt={tx.created_at} />
+                  <TransactionTimer
+                    createdAt={tx.created_at}
+                    status={tx.status}
+                  />
                 </div>
               ))
             )}

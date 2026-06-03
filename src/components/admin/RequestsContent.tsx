@@ -130,6 +130,8 @@ export function RequestsContent() {
       created_at: string;
     }>
   >([]);
+  const [detailTransaction, setDetailTransaction] =
+    useState<Transaction | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -281,9 +283,7 @@ export function RequestsContent() {
           Gérez les demandes d'achat et de vente
         </p>
       </div>
-
-      {/* overflow-x-auto directement ici — plus de overflow-hidden qui bloque les clics */}
-      <div className="rounded-2xl bg-card border border-border overflow-x-auto">
+      <div className="rounded-2xl bg-card border border-border overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -292,161 +292,179 @@ export function RequestsContent() {
             </span>
           </div>
         ) : (
-          <table className="w-full min-w-[1120px]">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left p-4 font-semibold text-sm">Client</th>
-                <th className="text-left p-4 font-semibold text-sm">Type</th>
-                <th className="text-left p-4 font-semibold text-sm">Crypto</th>
-                <th className="text-left p-4 font-semibold text-sm">Montant</th>
-                <th className="text-left p-4 font-semibold text-sm">
-                  Référence
-                </th>
-                <th className="text-left p-4 font-semibold text-sm">
-                  Portefeuille
-                </th>
-                <th className="text-left p-4 font-semibold text-sm max-w-[200px]">
-                  Adresse réception
-                </th>
-                <th className="text-left p-4 font-semibold text-sm">Preuve</th>
-                <th className="text-left p-4 font-semibold text-sm">Statut</th>
-                <th className="text-left p-4 font-semibold text-sm">Date</th>
-                <th className="text-left p-4 font-semibold text-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {transactions.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={11}
-                    className="p-8 text-center text-muted-foreground"
-                  >
-                    Aucune transaction trouvée
-                  </td>
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[1120px]">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Client
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm">Type</th>
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Crypto
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Montant
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Référence
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Portefeuille
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm max-w-[200px]">
+                    Adresse réception
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Preuve
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Statut
+                  </th>
+                  <th className="text-left p-4 font-semibold text-sm">Date</th>
+                  <th className="text-left p-4 font-semibold text-sm">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                transactions.map((tx) => (
-                  <tr
-                    key={tx.id}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium">{tx.client_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {tx.phone_number}
-                        </p>
-                        {tx.mobile_money_type && (
-                          <p className="text-xs text-accent">
-                            {formatMobileMoneyType(tx.mobile_money_type)}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${
-                          tx.type === "ACHAT"
-                            ? "bg-success/10 text-success"
-                            : "bg-blue-500/10 text-blue-500"
-                        }`}
-                      >
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <CryptoIcon symbol={tx.crypto} size="sm" />
-                        <div>
-                          <p className="font-medium">{tx.crypto}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {tx.network}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <p className="font-medium">
-                        {parseFloat(tx.amount_crypto)} {tx.crypto}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {parseFloat(tx.amount_ariary).toLocaleString("fr-FR")}{" "}
-                        Ar
-                      </p>
-                    </td>
-                    <td className="p-4">
-                      <p className="text-xs font-mono text-muted-foreground">
-                        {tx.reference}
-                      </p>
-                    </td>
-
-                    {/* Portefeuille */}
-                    <td className="p-4">
-                      <div className="flex flex-col gap-1">
-                        <img
-                          src={tx.wallet_lien}
-                          alt={tx.wallet_name}
-                          className="h-10 w-10 rounded-full object-cover border"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          {tx.wallet_name}
-                        </p>
-                      </div>
-                    </td>
-
-                    <td className="p-4 max-w-[220px]">
-                      <p
-                        className="text-xs text-muted-foreground font-mono leading-snug break-words"
-                        title={
-                          getReceptionAddressForDisplay(tx) || "Aucune adresse"
-                        }
-                      >
-                        {formatWalletAddressForTable(tx)}
-                      </p>
-                    </td>
-
-                    {/* Preuve */}
-                    <td className="p-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openProofs(tx)}
-                      >
-                        Voir
-                      </Button>
-                    </td>
-
-                    <td className="p-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[tx.status]}`}
-                      >
-                        {statusLabels[tx.status]}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(tx.created_at)}
-                      </p>
-                      {tx.updated_at && tx.updated_at !== tx.created_at && (
-                        <p className="text-xs text-muted-foreground">
-                          Modifié: {formatDateTime(tx.updated_at)}
-                        </p>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStatusChange(tx)}
-                      >
-                        Changer statut
-                      </Button>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {transactions.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={11}
+                      className="p-8 text-center text-muted-foreground"
+                    >
+                      Aucune transaction trouvée
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  transactions.map((tx) => (
+                    <tr
+                      key={tx.id}
+                      className="hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => setDetailTransaction(tx)}
+                    >
+                      <td className="p-4">
+                        <div>
+                          <p className="font-medium">{tx.client_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {tx.phone_number}
+                          </p>
+                          {tx.mobile_money_type && (
+                            <p className="text-xs text-accent">
+                              {formatMobileMoneyType(tx.mobile_money_type)}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            tx.type === "ACHAT"
+                              ? "bg-success/10 text-success"
+                              : "bg-blue-500/10 text-blue-500"
+                          }`}
+                        >
+                          {tx.type}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <CryptoIcon symbol={tx.crypto} size="sm" />
+                          <div>
+                            <p className="font-medium">{tx.crypto}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {tx.network}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <p className="font-medium">
+                          {parseFloat(tx.amount_crypto)} {tx.crypto}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {parseFloat(tx.amount_ariary).toLocaleString(
+                            "fr-FR",
+                          )}{" "}
+                          Ar
+                        </p>
+                      </td>
+                      <td className="p-4">
+                        <p className="text-xs font-mono text-muted-foreground">
+                          {tx.reference}
+                        </p>
+                      </td>
+
+                      {/* Portefeuille */}
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          <img
+                            src={tx.wallet_lien}
+                            alt={tx.wallet_name}
+                            className="h-10 w-10 rounded-full object-cover border"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {tx.wallet_name}
+                          </p>
+                        </div>
+                      </td>
+
+                      <td className="p-4 max-w-[220px]">
+                        <p
+                          className="text-xs text-muted-foreground font-mono leading-snug break-words"
+                          title={
+                            getReceptionAddressForDisplay(tx) ||
+                            "Aucune adresse"
+                          }
+                        >
+                          {formatWalletAddressForTable(tx)}
+                        </p>
+                      </td>
+
+                      {/* Preuve */}
+                      <td className="p-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openProofs(tx)}
+                        >
+                          Voir
+                        </Button>
+                      </td>
+
+                      <td className="p-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[tx.status]}`}
+                        >
+                          {statusLabels[tx.status]}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <p className="text-xs text-muted-foreground">
+                          {formatDateTime(tx.created_at)}
+                        </p>
+                        {tx.updated_at && tx.updated_at !== tx.created_at && (
+                          <p className="text-xs text-muted-foreground">
+                            Modifié: {formatDateTime(tx.updated_at)}
+                          </p>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStatusChange(tx)}
+                        >
+                          Changer statut
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -597,6 +615,212 @@ export function RequestsContent() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Détails Complets ── */}
+      <Dialog
+        open={!!detailTransaction}
+        onOpenChange={() => setDetailTransaction(null)}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Détails de la demande</DialogTitle>
+            <DialogDescription>
+              Référence: {detailTransaction?.reference}
+            </DialogDescription>
+          </DialogHeader>
+          {detailTransaction && (
+            <div className="space-y-6 py-4">
+              {/* Informations Client */}
+              <div className="space-y-3 pb-4 border-b border-border">
+                <h3 className="font-semibold text-base">Informations Client</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Nom</p>
+                    <p className="font-medium">
+                      {detailTransaction.client_name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Téléphone</p>
+                    <p className="font-medium">
+                      {detailTransaction.phone_number}
+                    </p>
+                  </div>
+                  {detailTransaction.mobile_money_type && (
+                    <div>
+                      <p className="text-muted-foreground">Mobile Money</p>
+                      <p className="font-medium">
+                        {formatMobileMoneyType(
+                          detailTransaction.mobile_money_type,
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Détails Transaction */}
+              <div className="space-y-3 pb-4 border-b border-border">
+                <h3 className="font-semibold text-base">Détails Transaction</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Type</p>
+                    <span
+                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        detailTransaction.type === "ACHAT"
+                          ? "bg-success/10 text-success"
+                          : "bg-blue-500/10 text-blue-500"
+                      }`}
+                    >
+                      {detailTransaction.type}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Statut</p>
+                    <span
+                      className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${statusColors[detailTransaction.status]}`}
+                    >
+                      {statusLabels[detailTransaction.status]}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Cryptomonnaie</p>
+                    <div className="flex items-center gap-2">
+                      <CryptoIcon symbol={detailTransaction.crypto} size="sm" />
+                      <div>
+                        <p className="font-medium">
+                          {detailTransaction.crypto}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {detailTransaction.network}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Référence</p>
+                    <p className="font-mono text-xs">
+                      {detailTransaction.reference}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Montants */}
+              <div className="space-y-3 pb-4 border-b border-border">
+                <h3 className="font-semibold text-base">Montants</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="p-3 rounded-xl bg-muted">
+                    <p className="text-muted-foreground mb-1">Montant Crypto</p>
+                    <p className="font-medium text-lg">
+                      {parseFloat(detailTransaction.amount_crypto)}{" "}
+                      {detailTransaction.crypto}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-accent/5">
+                    <p className="text-muted-foreground mb-1">Montant Ariary</p>
+                    <p className="font-medium text-lg text-accent">
+                      {parseFloat(
+                        detailTransaction.amount_ariary,
+                      ).toLocaleString("fr-FR")}{" "}
+                      Ar
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Portefeuille */}
+              <div className="space-y-3 pb-4 border-b border-border">
+                <h3 className="font-semibold text-base">Portefeuille</h3>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted">
+                  <img
+                    src={detailTransaction.wallet_lien}
+                    alt={detailTransaction.wallet_name}
+                    className="h-12 w-12 rounded-full object-cover border"
+                  />
+                  <div>
+                    <p className="font-medium">
+                      {detailTransaction.wallet_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {detailTransaction.mobile_money_type &&
+                        formatMobileMoneyType(
+                          detailTransaction.mobile_money_type,
+                        )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Adresse de Réception */}
+              {getReceptionAddressForDisplay(detailTransaction) && (
+                <div className="space-y-3 pb-4 border-b border-border">
+                  <h3 className="font-semibold text-base">
+                    Adresse de réception
+                  </h3>
+                  <p className="p-3 rounded-xl bg-muted font-mono text-xs break-all leading-relaxed">
+                    {getReceptionAddressForDisplay(detailTransaction)}
+                  </p>
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="space-y-3 pb-4 border-b border-border">
+                <h3 className="font-semibold text-base">Dates</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Créée</p>
+                    <p className="font-medium">
+                      {formatDateTime(detailTransaction.created_at)}
+                    </p>
+                  </div>
+                  {detailTransaction.updated_at &&
+                    detailTransaction.updated_at !==
+                      detailTransaction.created_at && (
+                      <div>
+                        <p className="text-muted-foreground">Modifiée</p>
+                        <p className="font-medium">
+                          {formatDateTime(detailTransaction.updated_at)}
+                        </p>
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {detailTransaction.notes && (
+                <div className="space-y-3 pb-4 border-b border-border">
+                  <h3 className="font-semibold text-base">Notes</h3>
+                  <p className="p-3 rounded-xl bg-blue-500/5 text-sm leading-relaxed">
+                    {detailTransaction.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => openProofs(detailTransaction)}
+                  className="flex-1"
+                >
+                  Voir les preuves
+                </Button>
+                <Button
+                  variant="accent"
+                  onClick={() => {
+                    handleStatusChange(detailTransaction);
+                    setDetailTransaction(null);
+                  }}
+                  className="flex-1"
+                >
+                  Changer le statut
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

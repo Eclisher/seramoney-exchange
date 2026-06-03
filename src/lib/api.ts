@@ -48,8 +48,10 @@ export const getClientTransactions = async (clientId: string) => {
   return response.data;
 };
 export const updateTransactionStatus = async (transactionId: string, status: string, notes?: string) => {
-  const response = await api.put(`/admin/transactions/${transactionId}/status`, { status, notes });
-  return response.data;
+const response = await api.patch(
+  `/admin/transactions/${transactionId}/status`,
+  { status, notes },
+);  return response.data;
 };
 export const getCryptos = async () => {
   const response = await api.get("/cryptos");
@@ -89,6 +91,87 @@ export const updateWallet = async (id: string, data: any) => {
 export const deleteWallet = async (id: string) => {
   const response = await api.delete(`/wallets/${id}`);
   return response.data;
+};
+
+type WalletAddressPayload = {
+  crypto_id: string;
+  network?: string;
+  address: string;
+};
+
+const walletAddressPathCandidates = (walletId: string) => [
+  `/wallets/${walletId}/addresses`,
+  `/wallets/wallets/${walletId}/addresses`,
+];
+
+const resolveWalletAddressPath = async (walletId: string) => {
+  const candidates = walletAddressPathCandidates(walletId);
+  for (const path of candidates) {
+    try {
+      await api.get(path);
+      return path;
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        return path;
+      }
+    }
+  }
+
+  return candidates[0];
+};
+
+export const getWalletAddresses = async (walletId: string) => {
+  const path = await resolveWalletAddressPath(walletId);
+  const response = await api.get(path);
+  return response.data;
+};
+
+export const createWalletAddress = async (
+  walletId: string,
+  data: WalletAddressPayload,
+) => {
+  const path = await resolveWalletAddressPath(walletId);
+  const response = await api.post(path, data);
+  return response.data;
+};
+
+export const deleteWalletAddress = async (
+  walletId: string,
+  addressId: string,
+) => {
+  const basePath = await resolveWalletAddressPath(walletId);
+  const response = await api.delete(`${basePath}/${addressId}`);
+  return response.data;
+};
+
+export const replaceWalletAddresses = async (
+  walletId: string,
+  addresses: WalletAddressPayload[],
+) => {
+  let existing: any[] = [];
+  try {
+    const data = await getWalletAddresses(walletId);
+    if (Array.isArray(data)) {
+      if (data.length > 0 && Array.isArray(data[0]?.addresses)) {
+        const currentWallet = data.find((item) => item.id === walletId);
+        existing = currentWallet?.addresses ?? [];
+      } else {
+        existing = data;
+      }
+    }
+  } catch {
+    existing = [];
+  }
+
+  await Promise.all(
+    existing
+      .filter((item) => item?.id)
+      .map((item) => deleteWalletAddress(walletId, item.id)),
+  );
+
+  await Promise.all(
+    addresses.map((item) => createWalletAddress(walletId, item)),
+  );
 };
 export async function uploadTransactionImage(params: {
   transaction_id: string;
