@@ -117,7 +117,7 @@ export default function SellCrypto() {
   useEffect(() => {
     if (!loading && cryptos.length > 0 && !crypto) {
       setCrypto(cryptos[0]);
-      setNetwork(cryptos[0].networks[0]);
+      setNetwork(cryptos[0].networks.find(Boolean) ?? "");
     }
   }, [loading, cryptos, crypto]);
 
@@ -550,7 +550,7 @@ export default function SellCrypto() {
                               type="button"
                               onClick={() => {
                                 setCrypto(c);
-                                setNetwork(c.networks[0]);
+                                setNetwork(c.networks.find(Boolean) ?? "");
                               }}
                               className={`min-w-[110px] p-4 rounded-xl border-2 transition-all duration-200 ${
                                 crypto?.symbol === c.symbol

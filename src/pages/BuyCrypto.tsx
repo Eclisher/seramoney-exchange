@@ -529,7 +529,7 @@ export default function BuyCrypto() {
                             type="button"
                             onClick={() => {
                               setCrypto(c);
-                              setNetwork(c.networks[0]);
+                              setNetwork(c.networks.find(Boolean) ?? "");
                             }}
                             className={`min-w-[110px] p-4 rounded-xl border-2 transition-all ${
                               crypto?.symbol === c.symbol

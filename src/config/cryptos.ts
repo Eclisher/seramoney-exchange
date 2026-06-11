@@ -26,7 +26,12 @@ export const useCryptos = () => {
           name: c.name,
           buyRate: Number(c.buy_rate),
           sellRate: Number(c.sell_rate),
-          networks: c.networks,
+          networks: Array.isArray(c.networks)
+            ? c.networks.filter(
+                (network: unknown) =>
+                  typeof network === "string" && network.trim().length > 0,
+              )
+            : [],
           color: c.color,
         }));
 
