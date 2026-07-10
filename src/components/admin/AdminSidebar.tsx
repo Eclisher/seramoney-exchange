@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
+import logoSera from "@/assets/logoSera.png";
 
 import { useNotifications } from "@/contexts/NotificationContext";
 import {
@@ -48,7 +49,7 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
               onClick={onClose}
             >
               <img
-                src="/src/assets/logoSera.png"
+                src={logoSera}
                 alt="Seramoney"
                 className="h-12 w-12 object-contain"
               />

@@ -4,6 +4,7 @@
   import { useAuth } from "@/contexts/AuthContext";
   import { Sun, Moon, Menu, X,  LogOut, User, LogIn } from "lucide-react";
   import { useState } from "react";
+  import logoSera from "@/assets/logoSera.png";
   import {
     DropdownMenu,
     DropdownMenuContent,
@@ -58,7 +59,7 @@ const animatedIcon =
           <Link to="/" className="flex items-center gap-2 group">
             <div className="h-11 w-11 rounded-3xl overflow-hidden bg-primary/10 flex items-center justify-center">
               <img
-                src="/src/assets/logoSera.png"
+                src={logoSera}
                 alt="Seramoney"
                 className="h-full w-full object-contain group-hover:scale-105 transition-transform"
               />

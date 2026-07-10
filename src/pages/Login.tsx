@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldCheck, LogIn, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import logoSera from "@/assets/logoSera.png";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -86,7 +87,7 @@ export default function Login() {
               className="inline-flex items-center gap-3 justify-center"
             >
               <img
-                src="/src/assets/logoSera.png"
+                src={logoSera}
                 alt="Seramoney"
                 className="h-12 w-12 object-contain"
               />

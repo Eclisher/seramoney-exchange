@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin, Facebook, Linkedin } from "lucide-react";
 import { scrollToId } from "@/lib/utils";
+import logoSera from "@/assets/logoSera.png";
 
 const navLink = "relative text-sm  text-muted-foreground transition-colors hover:text-foreground after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0 after:bg-accent after:transition-all hover:after:w-full";
 
@@ -12,7 +13,7 @@ export function Footer() {
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-3">
               <img
-                src="/src/assets/logoSera.png"
+                src={logoSera}
                 alt="Seramoney"
                 className="h-10 w-10 object-contain"
               />

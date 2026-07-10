@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff, ShieldCheck, LogIn } from "lucide-react";
 import { toast } from "sonner";
+import logoSera from "@/assets/logoSera.png";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { resetPasswordSchema, ResetPasswordFormValues } from "@/hooks/zodSchema";
@@ -80,7 +81,7 @@ export default function ResetPassword() {
           <div className="mb-8 text-center space-y-3">
             <Link to="/" className="inline-flex items-center gap-3">
                           <img
-                            src="/src/assets/logoSera.png"
+                            src={logoSera}
                             alt="Seramoney"
                             className="h-12 w-12 object-contain"
                           />
