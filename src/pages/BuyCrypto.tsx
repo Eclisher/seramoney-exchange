@@ -409,73 +409,73 @@ export default function BuyCrypto() {
       <main className="flex-1 py-8">
         <div className="container max-w-6xl">
           <div className="mb-8 max-w-2xl space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <ArrowUpRight className="h-5 w-5 text-blue-500" />
-                </div>
-                <h1 className="font-display text-2xl md:text-3xl font-bold">
-                  Acheter Crypto
-                </h1>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <ArrowUpRight className="h-5 w-5 text-blue-500" />
               </div>
-              <p className="text-muted-foreground">
-                Achetez des cryptomonnaies avec Mobile Money
-              </p>
-              <div className="space-y-6">
-                <div className="p-6 rounded-2xl border bg-card">
-                  <h2 className="font-semibold text-lg mb-4">
-                    📊 Votre limite d&apos;achat journalière
-                  </h2>
+              <h1 className="font-display text-2xl md:text-3xl font-bold">
+                Acheter Crypto
+              </h1>
+            </div>
+            <p className="text-muted-foreground">
+              Achetez des cryptomonnaies avec Mobile Money
+            </p>
+            <div className="space-y-6">
+              <div className="p-6 rounded-2xl border bg-card">
+                <h2 className="font-semibold text-lg mb-4">
+                  📊 Votre limite d&apos;achat journalière
+                </h2>
 
-                  <div className="space-y-4 text-sm">
-                    <div className="p-4 rounded-xl bg-success/5 border border-success/20">
-                      <p className="font-medium text-success">
-                        Montant maximum par jour
-                      </p>
-                      <p className="text-2xl font-bold mt-1">
-                        {DAILY_BUY_LIMIT_USDT.toLocaleString()} USDT
-                      </p>
-
-                      {isLoadingLimits ? (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Calcul de vos opérations du jour...
-                        </p>
-                      ) : (
-                        <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                          <p>
-                            Utilisé aujourd&apos;hui:{" "}
-                            <span className="font-medium text-foreground">
-                              {dailyUsedBuy.toFixed(2)} USDT
-                            </span>
-                          </p>
-                          <p>
-                            Restant pour aujourd&apos;hui:{" "}
-                            <span className="font-medium text-foreground">
-                              {Math.max(
-                                0,
-                                DAILY_BUY_LIMIT_USDT - dailyUsedBuy,
-                              ).toFixed(2)}{" "}
-                              USDT
-                            </span>
-                          </p>
-                          <p>
-                            Taux d&apos;utilisation:{" "}
-                            <span className="font-medium text-foreground">
-                              {buyUsagePercent.toFixed(0)}%
-                            </span>{" "}
-                            de votre limite d&apos;achat.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-muted-foreground text-xs">
-                      Basé sur vos demandes d&apos;achat du jour (en attente,
-                      payées ou terminées). Les limites sont réinitialisées
-                      toutes les 24h.
+                <div className="space-y-4 text-sm">
+                  <div className="p-4 rounded-xl bg-success/5 border border-success/20">
+                    <p className="font-medium text-success">
+                      Montant maximum par jour
                     </p>
+                    <p className="text-2xl font-bold mt-1">
+                      {DAILY_BUY_LIMIT_USDT.toLocaleString()} USDT
+                    </p>
+
+                    {isLoadingLimits ? (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Calcul de vos opérations du jour...
+                      </p>
+                    ) : (
+                      <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                        <p>
+                          Utilisé aujourd&apos;hui:{" "}
+                          <span className="font-medium text-foreground">
+                            {dailyUsedBuy.toFixed(2)} USDT
+                          </span>
+                        </p>
+                        <p>
+                          Restant pour aujourd&apos;hui:{" "}
+                          <span className="font-medium text-foreground">
+                            {Math.max(
+                              0,
+                              DAILY_BUY_LIMIT_USDT - dailyUsedBuy,
+                            ).toFixed(2)}{" "}
+                            USDT
+                          </span>
+                        </p>
+                        <p>
+                          Taux d&apos;utilisation:{" "}
+                          <span className="font-medium text-foreground">
+                            {buyUsagePercent.toFixed(0)}%
+                          </span>{" "}
+                          de votre limite d&apos;achat.
+                        </p>
+                      </div>
+                    )}
                   </div>
+
+                  <p className="text-muted-foreground text-xs">
+                    Basé sur vos demandes d&apos;achat du jour (en attente,
+                    payées ou terminées). Les limites sont réinitialisées toutes
+                    les 24h.
+                  </p>
                 </div>
               </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -609,8 +609,8 @@ export default function BuyCrypto() {
                       {cryptoAmount} {crypto.symbol}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Taux: 1 {crypto.symbol} = {crypto.buyRate.toLocaleString()}{" "}
-                      Ar
+                      Taux: 1 {crypto.symbol} ={" "}
+                      {crypto.buyRate.toLocaleString()} Ar
                     </p>
                   </div>
                 </>
@@ -632,7 +632,9 @@ export default function BuyCrypto() {
                     />
                   </div>
                   <div className="space-y-2 pt-2 border-t border-border">
-                    <Label htmlFor="wallet">Adresse de réception ({network})</Label>
+                    <Label htmlFor="wallet">
+                      Adresse de réception ({network})
+                    </Label>
                     <Input
                       id="wallet"
                       type="text"
@@ -655,13 +657,17 @@ export default function BuyCrypto() {
                       </span>
                     </li>
                     <li className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Montant payé</span>
+                      <span className="text-muted-foreground">
+                        Montant payé
+                      </span>
                       <span className="font-medium">
                         {parseFloat(amountAr || "0").toLocaleString("fr-FR")} Ar
                       </span>
                     </li>
                     <li className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Vous recevez</span>
+                      <span className="text-muted-foreground">
+                        Vous recevez
+                      </span>
                       <span className="font-medium text-accent">
                         ~{cryptoAmount} {crypto.symbol}
                       </span>
@@ -694,51 +700,71 @@ export default function BuyCrypto() {
                   </ul>
                 </div>
               )}
-            {step === 5 && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-base">Instructions de paiement</h3>
-                {isMvola && (
-                  <div className="rounded-xl border p-4 bg-success/5 border-success/20">
-                    <p className="text-sm text-muted-foreground">MVola</p>
-                    <p className="font-mono text-lg font-semibold text-success">#111*xxxxx</p>
-                  </div>
-                )}
-                {isOrange && (
-                  <div className="rounded-xl border p-4 bg-orange-500/5 border-orange-500/20">
-                    <p className="text-sm text-muted-foreground">OrangeMoney</p>
-                    <p className="font-mono text-lg font-semibold text-orange-600">#144*xxxxx</p>
-                  </div>
-                )}
-                {!isMvola && !isOrange && (
-                  <div className="rounded-xl border p-4 bg-muted/30">
-                    <p className="text-sm text-muted-foreground">
-                      Moyen de paiement: <span className="font-medium text-foreground">{selectedWallet?.name ?? "—"}</span>
-                    </p>
-                  </div>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Après le paiement, cliquez sur Suivant et envoyez la preuve.
-                </p>
-              </div>
-            )}
-            {step === 6 && (
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-base">Preuve (capture d'écran)</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="proof">Fichier</Label>
-                      <Input
-                        id="proof"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Formats images uniquement (PNG/JPG).
+              {step === 5 && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base">
+                    Instructions de paiement
+                  </h3>
+                  {isMvola && (
+                    <div className="rounded-xl border p-4 bg-success/5 border-success/20">
+                      <p className="text-sm text-muted-foreground">MVola</p>
+                      <p className="font-mono text-lg font-semibold text-success">
+                        #111*1*2*034 61 809 46 *Montant#
+                      </p>
+                      <p className="font-mono text-lg font-semibold text-success">
+                        Nom : Haingo Harifenitra
                       </p>
                     </div>
+                  )}
+                  {isOrange && (
+                    <div className="rounded-xl border p-4 bg-orange-500/5 border-orange-500/20">
+                      <p className="text-sm text-muted-foreground">
+                        OrangeMoney
+                      </p>
+                      <p className="font-mono text-lg font-semibold text-orange-600">
+                        #144*1*1*032 27 662 45*Montant#
+                      </p>
+                      <p className="font-mono text-lg font-semibold text-orange-600">
+                        Nom : Haingo Harifenitra
+                      </p>
+                    </div>
+                  )}
+                  {!isMvola && !isOrange && (
+                    <div className="rounded-xl border p-4 bg-muted/30">
+                      <p className="text-sm text-muted-foreground">
+                        Moyen de paiement:{" "}
+                        <span className="font-medium text-foreground">
+                          {selectedWallet?.name ?? "—"}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Après le paiement, cliquez sur Suivant et envoyez la preuve.
+                  </p>
+                </div>
+              )}
+              {step === 6 && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base">
+                    Preuve (capture d'écran)
+                  </h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="proof">Fichier</Label>
+                    <Input
+                      id="proof"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setProofFile(e.target.files?.[0] ?? null)
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Formats images uniquement (PNG/JPG).
+                    </p>
                   </div>
-                )}
-
+                </div>
+              )}
             </div>
 
             <div className="p-4 rounded-xl bg-accent/5 border border-accent/20 flex gap-3">
@@ -813,17 +839,24 @@ export default function BuyCrypto() {
                       });
                       setSuccess(true);
                       setTimeout(() => navigate("/history"), 1500);
-                        } catch (err: unknown) {
+                    } catch (err: unknown) {
                       toast({
                         title: "Erreur",
-                            description:
-                              (typeof err === "object" &&
-                              err &&
-                              "response" in err &&
-                              typeof (err as { response?: { data?: { message?: string } } }).response
-                                ?.data?.message === "string"
-                                ? (err as { response: { data: { message: string } } }).response.data.message
-                                : "Upload impossible"),
+                        description:
+                          typeof err === "object" &&
+                          err &&
+                          "response" in err &&
+                          typeof (
+                            err as {
+                              response?: { data?: { message?: string } };
+                            }
+                          ).response?.data?.message === "string"
+                            ? (
+                                err as {
+                                  response: { data: { message: string } };
+                                }
+                              ).response.data.message
+                            : "Upload impossible",
                         variant: "destructive",
                       });
                     } finally {
