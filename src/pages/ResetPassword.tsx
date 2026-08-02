@@ -9,7 +9,10 @@ import { toast } from "sonner";
 import logoSera from "@/assets/logoSera.png";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { resetPasswordSchema, ResetPasswordFormValues } from "@/hooks/zodSchema";
+import {
+  resetPasswordSchema,
+  ResetPasswordFormValues,
+} from "@/hooks/zodSchema";
 import api from "@/lib/api";
 
 const animatedButton =
@@ -54,11 +57,12 @@ export default function ResetPassword() {
         password: data.password,
         confirmPassword: data.confirmPassword,
       });
-      
+
       toast.success("Mot de passe réinitialisé !", {
-        description: "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+        description:
+          "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
       });
-      
+
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -80,15 +84,15 @@ export default function ResetPassword() {
         <div className="w-full max-w-md animate-fade-in">
           <div className="mb-8 text-center space-y-3">
             <Link to="/" className="inline-flex items-center gap-3">
-                          <img
-                            src={logoSera}
-                            alt="Seramoney"
-                            className="h-12 w-12 object-contain"
-                          />
-                          <span className="font-display text-4xl font-bold">
-                            Sera<span className="text-accent">money</span>
-                          </span>
-              </Link>
+              <img
+                src={logoSera}
+                alt="Seramoney"
+                className="h-12 w-12 object-contain"
+              />
+              <span className="font-display text-4xl font-bold">
+                Sera<span className="text-accent">money</span>
+              </span>
+            </Link>
             <h1 className="font-display text-2xl font-bold">
               Nouveau mot de passe
             </h1>

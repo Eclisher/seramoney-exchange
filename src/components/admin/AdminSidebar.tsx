@@ -19,8 +19,8 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: FileText, label: "Demandes", path: "/admin/requests" },
   { icon: Users, label: "Utilisateurs", path: "/admin/users" },
-  {icon: Bitcoin, label: "Cryptos", path: "/admin/cryptos" },
-  {icon: Wallet, label: "Portefeuilles", path: "/admin/wallets" },
+  { icon: Bitcoin, label: "Cryptos", path: "/admin/cryptos" },
+  { icon: Wallet, label: "Portefeuilles", path: "/admin/wallets" },
 ];
 
 interface AdminSidebarProps {
@@ -29,10 +29,14 @@ interface AdminSidebarProps {
   onLogout: () => void;
 }
 
-export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarProps) {
+export function AdminSidebar({
+  sidebarOpen,
+  onClose,
+  onLogout,
+}: AdminSidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const { unreadAdminCount, markAllAsRead  } = useNotifications();
+  const { unreadAdminCount, markAllAsRead } = useNotifications();
 
   return (
     <>
@@ -62,7 +66,8 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
           <nav className="flex-1 p-4 space-y-2">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
-              const showBadge = item.path === "/admin/requests" && unreadAdminCount > 0;
+              const showBadge =
+                item.path === "/admin/requests" && unreadAdminCount > 0;
               return (
                 <Link
                   key={item.path}
@@ -74,7 +79,7 @@ export function AdminSidebar({ sidebarOpen, onClose, onLogout }: AdminSidebarPro
                   }`}
                   onClick={() => {
                     if (item.path === "/admin/requests") {
-                      markAllAsRead(); 
+                      markAllAsRead();
                     }
                     onClose();
                   }}

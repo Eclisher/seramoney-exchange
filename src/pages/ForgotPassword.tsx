@@ -9,7 +9,10 @@ import { toast } from "sonner";
 import logoSera from "@/assets/logoSera.png";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { forgotPasswordSchema, ForgotPasswordFormValues } from "@/hooks/zodSchema";
+import {
+  forgotPasswordSchema,
+  ForgotPasswordFormValues,
+} from "@/hooks/zodSchema";
 import api from "@/lib/api";
 
 const animatedButton =
@@ -35,7 +38,8 @@ export default function ForgotPassword() {
       });
       setIsSuccess(true);
       toast.success("Email envoyé !", {
-        description: "Vérifiez votre boîte de réception pour le lien de réinitialisation.",
+        description:
+          "Vérifiez votre boîte de réception pour le lien de réinitialisation.",
       });
     } catch (error: any) {
       const errorMessage =
@@ -80,7 +84,8 @@ export default function ForgotPassword() {
                 <div>
                   <h3 className="font-semibold text-lg">Email envoyé !</h3>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Vérifiez votre boîte de réception. Un lien de réinitialisation vous a été envoyé.
+                    Vérifiez votre boîte de réception. Un lien de
+                    réinitialisation vous a été envoyé.
                   </p>
                 </div>
                 <Button

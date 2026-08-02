@@ -20,7 +20,8 @@ const animatedIcon =
 
 export default function Login() {
   const { login, user } = useAuth();
-  const [loading, setLoading] = useState(false);  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const hasShownToast = useRef(false);
@@ -39,7 +40,7 @@ export default function Login() {
         description: `Bienvenue ${user.full_name} !`,
         duration: 4000,
       });
-      
+
       if (user.role === "ADMIN") {
         navigate("/admin");
       } else {
