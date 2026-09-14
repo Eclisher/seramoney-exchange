@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Loader2, Search } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  Search,
+  ChevronDown,
+  Eraser,
+  Copy,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   getWallets,
@@ -44,42 +53,79 @@ interface Wallet {
   updated_at: string | null;
 }
 
+const makeKey = (cryptoId: string, network: string) =>
+  `${cryptoId}__${network ?? ""}`;
+
+const parseKey = (key: string): { crypto_id: string; network: string } => {
+  const sep = key.lastIndexOf("__");
+  if (sep === -1) return { crypto_id: key, network: "" };
+  return {
+    crypto_id: key.slice(0, sep),
+    network: key.slice(sep + 2),
+  };
+};
+
+const networksOf = (crypto: Crypto): string[] =>
+  crypto.networks && crypto.networks.length > 0 ? crypto.networks : [""];
+
+/** Construit une entrée vide pour chaque couple (crypto, réseau),
+ *  puis superpose les adresses existantes (création ET édition).
+ *  Les adresses orphelines (réseau inconnu) sont conservées pour ne rien perdre. */
+const initAddresses = (
+  list: Crypto[],
+  existing: WalletAddress[] = [],
+): Record<string, string> => {
+  const state: Record<string, string> = {};
+  list.forEach((crypto) => {
+    networksOf(crypto).forEach((network) => {
+      state[makeKey(crypto.id, network)] = "";
+    });
+  });
+  existing.forEach((addr) => {
+    if (!addr.crypto_id) return;
+    const key = makeKey(addr.crypto_id, addr.network ?? "");
+    state[key] = addr.address ?? "";
+  });
+  return state;
+};
+
 export function WalletContent() {
   const { toast } = useToast();
 
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [cryptos, setCryptos] = useState<Crypto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [search, setSearch] = useState("");
+  const [addressSearch, setAddressSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Wallet | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const [form, setForm] = useState({ lien: "", name: "" });
 
-  const [addressesByCrypto, setAddressesByCrypto] = useState<
-    Record<string, { network: string; address: string }>
-  >({});
-
-  const initAddressesForCryptos = (list: Crypto[]) => {
-    const state: Record<string, { network: string; address: string }> = {};
-    list.forEach((crypto) => {
-      state[crypto.id] = { network: crypto.networks?.[0] ?? "", address: "" };
-    });
-    return state;
-  };
+  // clé = "cryptoId__network" -> adresse saisie
+  const [addresses, setAddresses] = useState<Record<string, string>>({});
 
   const buildAddressBook = (walletList: Wallet[]) => {
     const book: Record<string, string> = {};
     walletList.forEach((wallet) => {
+      if (editing && wallet.id === editing.id) return;
       (wallet.addresses ?? []).forEach((entry) => {
-        if (!entry.crypto_id || !entry.network || !entry.address) return;
-        const key = `${entry.crypto_id}__${entry.network}`.toLowerCase();
+        if (!entry.crypto_id || !entry.address) return;
+        const key = makeKey(entry.crypto_id, entry.network ?? "").toLowerCase();
         if (!book[key]) book[key] = entry.address;
       });
     });
     return book;
   };
+
+  const addressBook = useMemo(
+    () => buildAddressBook(wallets),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [wallets, editing],
+  );
 
   const fetchWallets = async () => {
     try {
@@ -129,33 +175,49 @@ export function WalletContent() {
     fetchWallets();
     const fetchCryptos = async () => {
       const data = await getCryptos();
-      setCryptos(data);
-      setAddressesByCrypto((prev) => {
-        const initialized = initAddressesForCryptos(data);
-        data.forEach((crypto) => {
-          if (prev[crypto.id]) initialized[crypto.id] = prev[crypto.id];
+      const list: Crypto[] = (data ?? []).map((c: any) => ({
+        id: c.id,
+        symbol: c.symbol,
+        name: c.name,
+        networks: Array.isArray(c.networks) ? c.networks : [],
+      }));
+      setCryptos(list);
+      // Garantit une entrée pour chaque nouveau couple (crypto, réseau)
+      // sans écraser la saisie en cours.
+      setAddresses((prev) => {
+        const next = initAddresses(list);
+        Object.entries(prev).forEach(([k, v]) => {
+          if (k in next) next[k] = v;
+          else if (v) next[k] = v; // conserve les orphelines déjà remplies
         });
-        return initialized;
+        return next;
       });
     };
     fetchCryptos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const resetForm = () => {
     setForm({ lien: "", name: "" });
-    setAddressesByCrypto(initAddressesForCryptos(cryptos));
+    setAddresses(initAddresses(cryptos));
+    setAddressSearch("");
+    setCollapsed({});
   };
 
   const handleSubmit = async () => {
+    if (!form.name.trim()) {
+      toast({ title: "Nom requis", description: "Donnez un nom au wallet", variant: "destructive" });
+      return;
+    }
     try {
-      const payload = { name: form.name, lien: form.lien };
-      const addressesPayload: WalletAddress[] = Object.entries(addressesByCrypto)
-        .map(([crypto_id, values]) => ({
-          crypto_id,
-          network: values.network.trim(),
-          address: values.address.trim(),
-        }))
-        .filter((item) => item.address !== "");
+      setSaving(true);
+      const payload = { name: form.name.trim(), lien: form.lien.trim() };
+      const addressesPayload: WalletAddress[] = Object.entries(addresses)
+        .map(([key, value]) => {
+          const { crypto_id, network } = parseKey(key);
+          return { crypto_id, network, address: (value ?? "").trim() };
+        })
+        .filter((item) => item.crypto_id && item.address !== "");
 
       let walletId = editing?.id ?? "";
       if (editing) {
@@ -164,7 +226,7 @@ export function WalletContent() {
         toast({ title: "Succès", description: "Wallet mis à jour" });
       } else {
         const createdWallet = await createWallet(payload);
-        walletId = createdWallet?.id;
+        walletId = createdWallet?.id ?? createdWallet?.data?.id ?? "";
         if (walletId) await replaceWalletAddresses(walletId, addressesPayload);
         toast({ title: "Créé", description: "Wallet ajouté" });
       }
@@ -174,6 +236,8 @@ export function WalletContent() {
       fetchWallets();
     } catch {
       toast({ title: "Erreur", description: "Une erreur est survenue", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -190,14 +254,10 @@ export function WalletContent() {
 
   const openEdit = (wallet: Wallet) => {
     setEditing(wallet);
-    setForm({ lien: wallet.lien, name: wallet.name });
-    const mapped = initAddressesForCryptos(cryptos);
-    wallet.addresses?.forEach((addr) => {
-      if (mapped[addr.crypto_id]) {
-        mapped[addr.crypto_id] = { network: addr.network ?? "", address: addr.address ?? "" };
-      }
-    });
-    setAddressesByCrypto(mapped);
+    setForm({ lien: wallet.lien ?? "", name: wallet.name ?? "" });
+    setAddresses(initAddresses(cryptos, wallet.addresses ?? []));
+    setAddressSearch("");
+    setCollapsed({});
     setOpen(true);
   };
 
@@ -207,6 +267,33 @@ export function WalletContent() {
       w.lien.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const visibleCryptos = cryptos.filter(
+    (c) =>
+      c.symbol.toLowerCase().includes(addressSearch.toLowerCase()) ||
+      c.name.toLowerCase().includes(addressSearch.toLowerCase()),
+  );
+
+  const totalSlots = useMemo(
+    () =>
+      cryptos.reduce((sum, c) => sum + networksOf(c).length, 0),
+    [cryptos],
+  );
+
+  const filledCount = useMemo(
+    () => Object.values(addresses).filter((v) => (v ?? "").trim() !== "").length,
+    [addresses],
+  );
+
+  const filledPerCrypto = useMemo(() => {
+    const map: Record<string, number> = {};
+    cryptos.forEach((c) => {
+      map[c.id] = networksOf(c).filter(
+        (n) => (addresses[makeKey(c.id, n)] ?? "").trim() !== "",
+      ).length;
+    });
+    return map;
+  }, [cryptos, addresses]);
+
   const getCryptoDetails = (cryptoId: string) => {
     const crypto = cryptos.find((item) => item.id === cryptoId);
     return crypto
@@ -214,11 +301,8 @@ export function WalletContent() {
       : { symbol: "—", name: "Crypto inconnue" };
   };
 
-  const resolveSuggestedAddress = (cryptoId: string, network: string, walletList: Wallet[]) => {
-    if (!network) return "";
-    const key = `${cryptoId}__${network}`.toLowerCase();
-    return buildAddressBook(walletList)[key] ?? "";
-  };
+  const toggleCollapse = (cryptoId: string) =>
+    setCollapsed((prev) => ({ ...prev, [cryptoId]: !prev[cryptoId] }));
 
   /** Génère des initiales depuis le nom du wallet */
   const getInitials = (name: string) =>
@@ -324,7 +408,7 @@ export function WalletContent() {
                           const crypto = getCryptoDetails(addr.crypto_id);
                           return (
                             <div
-                              key={`${addr.crypto_id}-${i}`}
+                              key={`${addr.crypto_id}-${addr.network}-${i}`}
                               className="flex flex-col gap-0.5 rounded-md border border-border/50 bg-muted/30 px-3 py-2"
                             >
                               <div className="flex items-center gap-2">
@@ -384,16 +468,19 @@ export function WalletContent() {
         </p>
       )}
 
-      {/* DIALOG */}
+      {/* DIALOG — sans menu déroulant : une ligne par réseau, remplissage un à un */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-5 pt-5 pb-3 border-b border-border/60">
             <DialogTitle className="text-base font-semibold">
               {editing ? "Modifier le wallet" : "Ajouter un wallet"}
             </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filledCount}/{totalSlots} adresse{filledCount > 1 ? "s" : ""} renseignée{filledCount > 1 ? "s" : ""} — remplissez chaque réseau un à un, les champs vides sont ignorés.
+            </p>
           </DialogHeader>
 
-          <div className="space-y-4 pt-1">
+          <div className="overflow-y-auto px-5 py-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Nom</Label>
@@ -428,80 +515,177 @@ export function WalletContent() {
               </div>
             )}
 
-            {/* ADDRESSES */}
+            {/* ADDRESSES — tout affiché, sans select */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium">Adresses par crypto</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs font-medium">Adresses par crypto et par réseau</Label>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setCollapsed(Object.fromEntries(cryptos.map((c) => [c.id, true])))}
+                  >
+                    Tout replier
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setCollapsed({})}
+                  >
+                    Tout déplier
+                  </Button>
+                  {filledCount > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                      onClick={() => setAddresses(initAddresses(cryptos))}
+                    >
+                      <Eraser className="h-3 w-3 mr-1" />
+                      Effacer
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Filtrer par crypto… (ex: BTC, Ethereum)"
+                  value={addressSearch}
+                  onChange={(e) => setAddressSearch(e.target.value)}
+                  className="pl-9 h-8 text-xs"
+                />
+              </div>
 
               {cryptos.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-2">
                   Aucune crypto disponible.
                 </p>
+              ) : visibleCryptos.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  Aucune crypto ne correspond à « {addressSearch} ».
+                </p>
               ) : (
-                <div className="rounded-lg border border-border/60 overflow-hidden">
-                  {cryptos.map((crypto, idx) => (
-                    <div
-                      key={crypto.id}
-                      className={`grid grid-cols-[80px_1fr_1fr] gap-0 ${
-                        idx !== cryptos.length - 1 ? "border-b border-border/40" : ""
-                      }`}
-                    >
-                      {/* Crypto label */}
-                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-r border-border/40">
-                        <span className="text-xs font-semibold">{crypto.symbol}</span>
-                      </div>
-
-                      {/* Network select */}
-                      <select
-                        className="border-r border-border/40 px-2 py-2 bg-background text-sm text-foreground focus:outline-none focus:bg-muted/30"
-                        value={addressesByCrypto[crypto.id]?.network ?? ""}
-                        onChange={(e) => {
-                          const nextNetwork = e.target.value;
-                          const currentAddress = addressesByCrypto[crypto.id]?.address ?? "";
-                          const suggested = resolveSuggestedAddress(crypto.id, nextNetwork, wallets);
-                          setAddressesByCrypto((prev) => ({
-                            ...prev,
-                            [crypto.id]: {
-                              ...(prev[crypto.id] ?? { network: "", address: "" }),
-                              network: nextNetwork,
-                              address: currentAddress || suggested,
-                            },
-                          }));
-                        }}
+                <div className="space-y-2.5">
+                  {visibleCryptos.map((crypto) => {
+                    const nets = networksOf(crypto);
+                    const filled = filledPerCrypto[crypto.id] ?? 0;
+                    const isCollapsed = !!collapsed[crypto.id];
+                    return (
+                      <div
+                        key={crypto.id}
+                        className={`rounded-lg border overflow-hidden transition-colors ${
+                          filled > 0 ? "border-primary/40" : "border-border/60"
+                        }`}
                       >
-                        {(crypto.networks ?? []).length === 0 ? (
-                          <option value="">Aucun réseau</option>
-                        ) : (
-                          crypto.networks.map((network) => (
-                            <option key={network} value={network}>
-                              {network}
-                            </option>
-                          ))
-                        )}
-                      </select>
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapse(crypto.id)}
+                          className="w-full flex items-center gap-2 px-3 py-2 bg-muted/40 hover:bg-muted/60 text-left"
+                        >
+                          <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-bold leading-none">
+                            {crypto.symbol}
+                          </span>
+                          <span className="text-xs font-medium truncate flex-1">
+                            {crypto.name}
+                          </span>
+                          <span
+                            className={`text-[11px] tabular-nums ${
+                              filled > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+                            }`}
+                          >
+                            {filled}/{nets.length}
+                          </span>
+                          <ChevronDown
+                            className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
+                              isCollapsed ? "-rotate-90" : ""
+                            }`}
+                          />
+                        </button>
 
-                      {/* Address input */}
-                      <Input
-                        placeholder="Adresse…"
-                        value={addressesByCrypto[crypto.id]?.address ?? ""}
-                        onChange={(e) =>
-                          setAddressesByCrypto((prev) => ({
-                            ...prev,
-                            [crypto.id]: {
-                              ...(prev[crypto.id] ?? { network: "", address: "" }),
-                              address: e.target.value,
-                            },
-                          }))
-                        }
-                        className="rounded-none border-0 border-none focus-visible:ring-0 focus-visible:ring-offset-0 h-auto py-2 text-sm font-mono placeholder:text-muted-foreground/50"
-                      />
-                    </div>
-                  ))}
+                        {!isCollapsed && (
+                          <div className="divide-y divide-border/40">
+                            {nets.map((network) => {
+                              const key = makeKey(crypto.id, network);
+                              const value = addresses[key] ?? "";
+                              const isFilled = value.trim() !== "";
+                              const suggestion =
+                                !isFilled
+                                  ? (addressBook[`${key}`.toLowerCase()] ?? "")
+                                  : "";
+                              return (
+                                <div key={key} className="px-3 py-2 space-y-1.5 bg-card">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="inline-flex items-center rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                      {network || "Réseau par défaut"}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      {suggestion && (
+                                        <button
+                                          type="button"
+                                          title={`Reprendre : ${suggestion}`}
+                                          onClick={() =>
+                                            setAddresses((prev) => ({ ...prev, [key]: suggestion }))
+                                          }
+                                          className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                                        >
+                                          <Copy className="h-3 w-3" />
+                                          Reprendre
+                                        </button>
+                                      )}
+                                      {isFilled && (
+                                        <button
+                                          type="button"
+                                          title="Effacer ce champ"
+                                          onClick={() =>
+                                            setAddresses((prev) => ({ ...prev, [key]: "" }))
+                                          }
+                                          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive"
+                                        >
+                                          <Eraser className="h-3 w-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Input
+                                    placeholder={suggestion || `Adresse ${crypto.symbol}${network ? ` — ${network}` : ""}…`}
+                                    value={value}
+                                    onChange={(e) =>
+                                      setAddresses((prev) => ({ ...prev, [key]: e.target.value }))
+                                    }
+                                    className={`h-9 text-sm font-mono placeholder:text-muted-foreground/50 ${
+                                      isFilled ? "border-primary/40 bg-primary/[0.03]" : ""
+                                    }`}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
+          </div>
 
-            <Button className="w-full h-9 text-sm font-medium" onClick={handleSubmit}>
-              {editing ? "Mettre à jour" : "Créer le wallet"}
+          <div className="px-5 py-3 border-t border-border/60 bg-muted/20">
+            <Button
+              className="w-full h-9 text-sm font-medium"
+              onClick={handleSubmit}
+              disabled={saving || !form.name.trim()}
+            >
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {editing
+                ? `Mettre à jour (${filledCount} adresse${filledCount > 1 ? "s" : ""})`
+                : `Créer le wallet (${filledCount} adresse${filledCount > 1 ? "s" : ""})`}
             </Button>
           </div>
         </DialogContent>
